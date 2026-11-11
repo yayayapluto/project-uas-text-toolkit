@@ -1,23 +1,33 @@
 #include "tt_text.h"
-#include "../common/common.h"
 #include <string.h>
-#include <stdlib.h>
 
-/* Memuat seluruh berkas ke TtText; data dialokasi util_read_file.
- * Pemanggil melepas lewat tt_free_text. */
+/* Memuat berkas dan mengisi data, length, serta path sesuai TT-01..TT-03. */
 Status tt_load_text(const char *path, TtText *out) {
-    char *buf;
-    size_t len;
-    Status s = util_read_file(path, &buf, &len);
-    if (s != ST_OK) return s;
-    out->data = buf;
-    out->n = len;
+    Status s;
+    if (path == NULL || out == NULL) return ST_BAD_INPUT;
+    s = util_read_file(path, &out->data, &out->length);
+    if (s != ST_OK) {
+        out->data = NULL;
+        out->length = 0;
+        out->path[0] = '\0';
+        return s;
+    }
+    if (strlen(path) >= UTIL_MAX_PATH) {
+        util_free(out->data);
+        out->data = NULL;
+        out->length = 0;
+        out->path[0] = '\0';
+        return ST_BAD_INPUT;
+    }
+    strcpy(out->path, path);
     return ST_OK;
 }
 
-/* Melepas buffer TtText dan mengosongkan struct. */
+/* Melepas data dan mengosongkan struct; pemanggilan ganda aman. */
 void tt_free_text(TtText *t) {
+    if (t == NULL) return;
     util_free(t->data);
     t->data = NULL;
-    t->n = 0;
+    t->length = 0;
+    t->path[0] = '\0';
 }
