@@ -7,7 +7,7 @@
 #include <limits.h>
 #include <math.h>
 
-/* Pelacak alokasi: selisih jumlah alokasi sukses dan pelepasan. */
+/* Pelacak alokasi: selisih jumlah alokasi sukses dan free. */
 static size_t allocs = 0;
 static size_t frees = 0;
 static int fail_after = -1;
@@ -22,14 +22,14 @@ static int check_fail = 0;
 const char *util_status_message(Status s) {
     switch (s) {
         case ST_OK:             return "OK";
-        case ST_FILE_NOT_FOUND: return "berkas tidak ditemukan";
-        case ST_FILE_EMPTY:     return "berkas kosong";
-        case ST_FILE_WRITE:     return "gagal menulis berkas";
-        case ST_BAD_INPUT:      return "masukan tidak valid";
-        case ST_BAD_FORMAT:     return "format tidak valid";
-        case ST_OUT_OF_RANGE:   return "nilai di luar rentang";
-        case ST_NO_MEMORY:      return "memori tidak cukup";
-        default:                return "status tidak dikenal";
+        case ST_FILE_NOT_FOUND: return "File tidak ditemukan";
+        case ST_FILE_EMPTY:     return "File kosong";
+        case ST_FILE_WRITE:     return "Gagal menulis file";
+        case ST_BAD_INPUT:      return "Masukan tidak valid";
+        case ST_BAD_FORMAT:     return "Format tidak valid";
+        case ST_OUT_OF_RANGE:   return "Nilai di luar rentang";
+        case ST_NO_MEMORY:      return "Memori tidak cukup";
+        default:                return "Status tidak dikenal";
     }
 }
 
@@ -106,9 +106,9 @@ int util_stricmp(const char *a, const char *b) {
     return 0;
 }
 
-/* Membaca seluruh berkas biner ke buffer NUL-terminated via util_malloc;
+/* Membaca seluruh file biner ke buffer NUL-terminated via util_malloc;
  * *len = jumlah byte tanpa NUL. Tidak ada -> ST_FILE_NOT_FOUND; 0 byte ->
- * ST_FILE_EMPTY tanpa alokasi tersisa. Pemanggil melepas *out memakai
+ * ST_FILE_EMPTY tanpa alokasi tersisa. Pemanggil membebaskan *out lewat
  * util_free. */
 Status util_read_file(const char *path, char **out, size_t *len) {
     FILE *f;
@@ -136,7 +136,7 @@ Status util_read_file(const char *path, char **out, size_t *len) {
     return ST_OK;
 }
 
-/* Menulis len byte data ke berkas mode "wb". Gagal buka/tulis ->
+/* Menulis len byte data ke file mode "wb". Gagal buka/tulis ->
  * ST_FILE_WRITE. */
 Status util_write_file(const char *path, const char *data, size_t len) {
     FILE *f;
@@ -150,7 +150,7 @@ Status util_write_file(const char *path, const char *data, size_t len) {
 }
 
 /* Alokasi malloc terlacak; NULL saat injeksi kegagalan aktif dan kuota
- * habis. Blok sukses dihitung ke balance. Pemanggil melepas via util_free. */
+ * habis. Blok sukses dihitung ke balance. Pemanggil membebaskan via util_free. */
 void *util_malloc(size_t n) {
     void *p;
     if (fail_after >= 0) {
@@ -175,7 +175,7 @@ void *util_calloc(size_t n, size_t size) {
 }
 
 /* realloc terlacak; NULL -> alokasi baru. Gagal: blok lama utuh, NULL
- * kembali. n == 0 melepas blok. Pemanggil melepas hasil via util_free. */
+ * kembali. n == 0 membebaskan blok. Pemanggil membebaskan hasil via util_free. */
 void *util_realloc(void *p, size_t n) {
     void *np;
     if (p == NULL) return util_malloc(n);
@@ -190,14 +190,14 @@ void *util_realloc(void *p, size_t n) {
     return np;
 }
 
-/* Melepas blok yang dialokasi util_*; NULL aman dan tidak dihitung. */
+/* Membebaskan blok yang dialokasi util_*; NULL aman dan tidak dihitung. */
 void util_free(void *p) {
     if (p == NULL) return;
     frees++;
     free(p);
 }
 
-/* Balance = alokasi sukses dikurangi pelepasan; 0 berarti tidak bocor. */
+/* Balance = alokasi sukses dikurangi free; 0 berarti tidak bocor. */
 int util_alloc_balance(void) {
     return (int)(allocs - frees);
 }
