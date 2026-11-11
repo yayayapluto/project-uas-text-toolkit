@@ -25,10 +25,10 @@ void ttui_reset(void) {
     printf("\033[0m");
 }
 
-/* Mencetak n karakter garis "─" dengan warna border aktif. */
+/* Mencetak n karakter garis "-" dengan warna border aktif. */
 static void ui_hline(int n) {
     int i;
-    for (i = 0; i < n; i++) fputs("\xE2\x94\x80", stdout);
+    for (i = 0; i < n; i++) putchar('-');
 }
 
 /* Menyusun ulang lebar menjadi string sementara untuk pemanggil. */
@@ -41,8 +41,8 @@ static char *ui_pad(size_t pad) {
     return s;
 }
 
-/* Panel dengan border sudut bulat; judul memakai warna (r,g,b), isi
- * memakai warna teks bawaan, border memakai warna border bawaan. */
+/* Panel dengan border sudut ASCII "+ - |"; judul memakai warna (r,g,b),
+ * isi memakai warna teks bawaan, border memakai warna border bawaan. */
 void ttui_panel(const char *title, const char **lines, size_t count,
                 int r, int g, int b) {
     size_t w = 0, i;
@@ -53,19 +53,20 @@ void ttui_panel(const char *title, const char **lines, size_t count,
         if (lw > w) w = lw;
     }
     ttui_rgb(TTUI_BORDER_R, TTUI_BORDER_G, TTUI_BORDER_B);
-    fputs("\xE2\x95\xAD\xE2\x94\x80", stdout);
+    putchar('+');
+    putchar('-');
     ui_hline((int)w + 2);
-    fputs("\xE2\x95\xAE\n", stdout);
+    fputs("+\n", stdout);
     if (title != NULL) {
         pad = ui_pad(w - ttui_width(title));
         if (pad != NULL) {
             ttui_rgb(TTUI_BORDER_R, TTUI_BORDER_G, TTUI_BORDER_B);
-            fputs("\xE2\x94\x82 ", stdout);
+            fputs("| ", stdout);
             ttui_rgb(r, g, b);
             fputs(title, stdout);
             ttui_rgb(TTUI_BORDER_R, TTUI_BORDER_G, TTUI_BORDER_B);
             printf(" %s", pad);
-            fputs("\xE2\x94\x82\n", stdout);
+            fputs("|\n", stdout);
             util_free(pad);
         }
     }
@@ -74,18 +75,19 @@ void ttui_panel(const char *title, const char **lines, size_t count,
         pad = ui_pad(w - lw);
         if (pad == NULL) continue;
         ttui_rgb(TTUI_BORDER_R, TTUI_BORDER_G, TTUI_BORDER_B);
-        fputs("\xE2\x94\x82 ", stdout);
+        fputs("| ", stdout);
         ttui_rgb(TTUI_TEXT_R, TTUI_TEXT_G, TTUI_TEXT_B);
         printf("%s", lines[i]);
         printf(" %s", pad);
         ttui_rgb(TTUI_BORDER_R, TTUI_BORDER_G, TTUI_BORDER_B);
-        fputs("\xE2\x94\x82\n", stdout);
+        fputs("|\n", stdout);
         util_free(pad);
     }
     ttui_rgb(TTUI_BORDER_R, TTUI_BORDER_G, TTUI_BORDER_B);
-    fputs("\xE2\x95\xB0\xE2\x94\x80", stdout);
+    putchar('+');
+    putchar('-');
     ui_hline((int)w + 2);
-    fputs("\xE2\x95\xAF\n", stdout);
+    fputs("+\n", stdout);
     ttui_reset();
 }
 
@@ -100,12 +102,12 @@ static size_t ui_col_width(const char **headers, const char ***rows,
     return w;
 }
 
-/* Satu baris sel tabel: "│ isi │ isi │" dengan padding spasi. */
+/* Satu baris sel tabel: "| isi | isi |" dengan padding spasi. */
 static void ui_row(const char **cells, const size_t *w, size_t ncols, int head) {
     size_t c;
     char *pad;
     ttui_rgb(TTUI_BORDER_R, TTUI_BORDER_G, TTUI_BORDER_B);
-    fputs("\xE2\x94\x82", stdout);
+    putchar('|');
     for (c = 0; c < ncols; c++) {
         pad = ui_pad(w[c] - ttui_width(cells[c]));
         if (pad == NULL) return;
@@ -115,27 +117,25 @@ static void ui_row(const char **cells, const size_t *w, size_t ncols, int head) 
         fputs(cells[c], stdout);
         ttui_rgb(TTUI_BORDER_R, TTUI_BORDER_G, TTUI_BORDER_B);
         printf(" %s", pad);
-        fputs("\xE2\x94\x82", stdout);
+        putchar('|');
         util_free(pad);
     }
     fputs("\n", stdout);
 }
 
-/* Baris pemisah: ├─┼─┤ atau ╰─┴─╯ mengikuti jenis ujung yang diminta. */
-static void ui_sep(const size_t *w, size_t ncols, const char *left,
-                   const char *mid, const char *right) {
+/* Baris pemisah tabel: +-----+-----+ dengan warna border aktif. */
+static void ui_sep(const size_t *w, size_t ncols) {
     size_t c;
     ttui_rgb(TTUI_BORDER_R, TTUI_BORDER_G, TTUI_BORDER_B);
-    fputs(left, stdout);
+    putchar('+');
     for (c = 0; c < ncols; c++) {
         ui_hline((int)w[c] + 2);
-        if (c + 1 < ncols) fputs(mid, stdout);
+        putchar('+');
     }
-    fputs(right, stdout);
     fputs("\n", stdout);
 }
 
-/* Tabel dengan sudut bulat: header berwarna aksen, isi warna teks. */
+/* Tabel ASCII: header berwarna aksen, isi warna teks. */
 void ttui_table(const char **headers, const char ***rows,
                 size_t nrows, size_t ncols) {
     size_t *w, i;
@@ -143,13 +143,13 @@ void ttui_table(const char **headers, const char ***rows,
     w = (size_t *)util_malloc(ncols * sizeof(size_t));
     if (w == NULL) return;
     for (i = 0; i < ncols; i++) w[i] = ui_col_width(headers, rows, nrows, i);
-    ui_sep(w, ncols, "\xE2\x95\xAD\xE2\x94\x80", "\xE2\x94\x80\xE2\x94\xAC\xE2\x94\x80", "\xE2\x94\x80\xE2\x94\xAE");
+    ui_sep(w, ncols);
     ui_row(headers, w, ncols, 1);
-    ui_sep(w, ncols, "\xE2\x94\x9C\xE2\x94\x80", "\xE2\x94\x80\xE2\x94\xBC\xE2\x94\x80", "\xE2\x94\x80\xE2\x94\xA4");
+    ui_sep(w, ncols);
     for (i = 0; i < nrows; i++) {
         ui_row(rows[i], w, ncols, 0);
     }
-    ui_sep(w, ncols, "\xE2\x95\xB0\xE2\x94\x80", "\xE2\x94\x80\xE2\x94\xB4\xE2\x94\x80", "\xE2\x94\x80\xE2\x95\xAF");
+    ui_sep(w, ncols);
     ttui_reset();
     util_free(w);
 }
@@ -164,7 +164,7 @@ void ttui_badge(const char *label, int kind) {
         default:              r = 100; g = 160; b = 240; break;
     }
     ttui_rgb(r, g, b);
-    fputs("\xE2\x97\x8F ", stdout);
+    fputs("* ", stdout);
     fputs(label != NULL ? label : "", stdout);
     ttui_reset();
 }
