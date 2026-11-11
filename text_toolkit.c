@@ -26,10 +26,8 @@ typedef struct {
 /* Melepas frekuensi lama dan menandai hasil analisis basi. */
 static void analysis_invalidate(MenuState *st) {
     util_free(st->freq);
-    st->freq = NULL;
-    st->freq_count = 0;
-    st->has_freq = 0;
-    st->has_stats = 0;
+    st->freq = NULL; st->freq_count = 0;
+    st->has_freq = 0; st->has_stats = 0;
 }
 
 /* Nama file dari path tanpa direktori (pemisah / atau \\). */
@@ -42,16 +40,15 @@ static const char *base_name(const char *path) {
 
 /* Baris status untuk header menu: file aktif atau belum ada. */
 static void status_text(const MenuState *st, char *buf, size_t size) {
-    if (st == NULL || !st->has_text) {
+    if (st != NULL && st->has_text)
+        snprintf(buf, size, "File aktif: %s (%d karakter)",
+                 base_name(st->text.path), (int)st->text.length);
+    else
         snprintf(buf, size, "Belum ada file dimuat");
-        return;
-    }
-    snprintf(buf, size, "File aktif: %s (%d karakter)",
-             base_name(st->text.path), (int)st->text.length);
 }
 
-/* Membaca pilihan angka [min,max] dengan prompt seragam; jawaban salah
- * diwarn lalu diulang. Kembali 1 saat terisi, 0 saat EOF. */
+/* Pilihan angka [min,max]; jawaban salah diwarn lalu diulang. Kembali 1
+ * saat terisi, 0 saat EOF. */
 static int menu_choice(int min, int max, int *out) {
     char buf[UTIL_MAX_LINE];
     long lv;
@@ -78,12 +75,11 @@ static void menu_load_text(MenuState *st) {
     if (ui_read_path("Path file > ", path, sizeof(path)) != ST_OK) return;
     tt_free_text(&st->text);
     s = tt_load_text(path, &st->text);
-    if (s == ST_OK) {
-        st->has_text = 1;
+    st->has_text = s == ST_OK;
+    if (st->has_text) {
         analysis_invalidate(st);
         ui_ok("%s (%d karakter)", base_name(path), (int)st->text.length);
     } else {
-        st->has_text = 0;
         ui_error("%s", util_status_message(s));
     }
 }
@@ -98,8 +94,7 @@ static int num_digits(int n) {
     return d;
 }
 
-/* Daftar hasil grep: ringkasan di atas, paling banyak 40 baris isi,
- * sisanya diringkas; tiap isi baris dipotong sesuai sisa lebar. */
+/* Daftar hasil grep: ringkasan di atas, maksimal 40 baris isi. */
 static void grep_print(const TtMatch *m, int count, int total, int invert) {
     int lw = 1, cw = 1, i, show, label;
     ui_section("Hasil grep");
@@ -120,9 +115,8 @@ static void grep_print(const TtMatch *m, int count, int total, int invert) {
         }
         putchar('\n');
     }
-    if (count > show) {
+    if (count > show)
         ui_info("... dan %d lainnya (tidak ditampilkan)", count - show);
-    }
 }
 
 /* Menu 2: mini grep dengan konfirmasi opsi dan daftar hasil terbatas. */
@@ -131,20 +125,14 @@ static void menu_grep(const MenuState *st) {
     TtMatch *matches = NULL;
     int count = 0, total = 0, ignore_case, invert;
     Status s;
-    if (!st->has_text) {
-        ui_warn("Muat file lewat menu 1 lebih dahulu.");
-        return;
-    }
+    if (!st->has_text) { ui_warn("Muat file lewat menu 1 lebih dahulu."); return; }
     if (util_read_line("Pola > ", pattern, sizeof(pattern)) != ST_OK) return;
     util_trim(pattern);
     if (ui_confirm("Abaikan huruf besar/kecil?", 1, &ignore_case) != ST_OK) return;
     if (ui_confirm("Tampilkan baris yang tidak cocok?", 0, &invert) != ST_OK) return;
     s = tt_grep(&st->text, pattern, ignore_case, invert, &matches, &count, &total);
-    if (s == ST_OK) {
-        grep_print(matches, count, total, invert);
-    } else {
-        ui_error("%s", util_status_message(s));
-    }
+    if (s == ST_OK) grep_print(matches, count, total, invert);
+    else ui_error("%s", util_status_message(s));
     tt_free_matches(matches, count);
 }
 
@@ -196,31 +184,26 @@ static void analysis_search_word(const MenuState *st) {
     memcpy(sorted, st->freq, (size_t)st->freq_count * sizeof(TtWordFreq));
     tt_sort_words_alpha(sorted, st->freq_count);
     idx = tt_binary_search_word(sorted, st->freq_count, word);
-    if (idx >= 0) {
-        ui_info("Ditemukan: %s (%d kali)", sorted[idx].word, sorted[idx].count);
-    } else {
-        ui_warn("Kata tidak ditemukan.");
-    }
+    if (idx >= 0) ui_info("Ditemukan: %s (%d kali)", sorted[idx].word, sorted[idx].count);
+    else ui_warn("Kata tidak ditemukan.");
     util_free(sorted);
 }
 
 /* Sub-menu 3: statistik, histogram, frekuensi kata, binary search.
  * Tiap pilihan membuka layar sendiri lalu jeda kembali ke sub-menu. */
 static void menu_analyze(MenuState *st) {
-    int pilihan;
+    int pilihan, i;
     char status[UTIL_MAX_LINE];
-    if (analysis_run(st) != ST_OK) {
-        ui_warn("Muat file lewat menu 1 lebih dahulu.");
-        return;
-    }
+    static const char *const items[] = {
+        "Statistik", "Histogram huruf", "Frekuensi kata",
+        "Cari kata (binary search)"
+    };
+    if (analysis_run(st) != ST_OK) { ui_warn("Muat file lewat menu 1 lebih dahulu."); return; }
     status_text(st, status, sizeof(status));
     for (;;) {
         ui_clear();
         ui_screen_header("Text Toolkit > Analisis teks", status);
-        ui_menu_item(1, "Statistik");
-        ui_menu_item(2, "Histogram huruf");
-        ui_menu_item(3, "Frekuensi kata");
-        ui_menu_item(4, "Cari kata (binary search)");
+        for (i = 0; i < 4; i++) ui_menu_item(i + 1, items[i]);
         ui_menu_item(0, "Kembali");
         ui_rule();
         if (!menu_choice(0, 4, &pilihan)) return;
@@ -274,14 +257,15 @@ static void cipher_print_line(const char *label, const char *text) {
 /* Menu 4: sandi teks yang diketik dan proses file ke file; pola layar
  * sama dengan sub-menu analisis. */
 static void menu_cipher(void) {
-    int pilihan;
+    int pilihan, i;
+    static const char *const items[] = {
+        "Caesar (teks diketik)", "Vigenere (teks diketik)",
+        "Brute force Caesar", "File ke file"
+    };
     for (;;) {
         ui_clear();
         ui_screen_header("Text Toolkit > Cipher", "Teks diketik; tanpa file dimuat");
-        ui_menu_item(1, "Caesar (teks diketik)");
-        ui_menu_item(2, "Vigenere (teks diketik)");
-        ui_menu_item(3, "Brute force Caesar");
-        ui_menu_item(4, "File ke file");
+        for (i = 0; i < 4; i++) ui_menu_item(i + 1, items[i]);
         ui_menu_item(0, "Kembali");
         ui_rule();
         if (!menu_choice(0, 4, &pilihan)) return;
@@ -366,8 +350,9 @@ static void state_free(MenuState *st) {
     analysis_invalidate(st);
 }
 
-/* Judul layar aksi menu utama, urut sesuai nomor menu. */
-static const char *const action_titles[6] = {
+/* Label menu utama 1..6 dan 0; label yang sama jadi judul layar aksi. */
+static const char *const main_items[] = {
+    "Keluar",
     "Muat file teks",
     "Mini grep",
     "Analisis teks",
@@ -381,7 +366,7 @@ static const char *const action_titles[6] = {
  * judul aksi -> hasil -> jeda; keluar cukup satu baris penutup. */
 void run_text_toolkit(void) {
     MenuState st;
-    int pilihan;
+    int pilihan, i;
     memset(&st, 0, sizeof(st));
     ui_init();
     ui_banner("TEXT TOOLKIT", "Mini grep, analisis, sandi, dan laporan",
@@ -391,28 +376,21 @@ void run_text_toolkit(void) {
         status_text(&st, status, sizeof(status));
         ui_clear();
         ui_screen_header("TEXT TOOLKIT", status);
-        ui_menu_item(1, "Muat file teks");
-        ui_menu_item(2, "Mini grep");
-        ui_menu_item(3, "Analisis teks");
-        ui_menu_item(4, "Cipher (Caesar / Vigenere / brute force)");
-        ui_menu_item(5, "Palindrom dan reverse");
-        ui_menu_item(6, "Tulis laporan");
-        ui_menu_item(0, "Keluar");
+        for (i = 1; i <= 6; i++) ui_menu_item(i, main_items[i]);
+        ui_menu_item(0, main_items[0]);
         ui_rule();
         if (!menu_choice(0, 6, &pilihan)) break;
         if (pilihan == 0) break;
         /* Sub-menu 3 dan 4 mengelola layarnya sendiri. */
-        if (pilihan == 3) {
-            menu_analyze(&st);
-        } else if (pilihan == 4) {
-            menu_cipher();
-        } else {
+        if (pilihan == 3) menu_analyze(&st);
+        else if (pilihan == 4) menu_cipher();
+        else {
             ui_clear();
-            ui_screen_header(action_titles[pilihan - 1], status);
+            ui_screen_header(main_items[pilihan], status);
             if (pilihan == 1) menu_load_text(&st);
             else if (pilihan == 2) menu_grep(&st);
             else if (pilihan == 5) menu_palindrome();
-            else if (pilihan == 6) menu_report(&st);
+            else menu_report(&st);
             ui_pause();
         }
     }
