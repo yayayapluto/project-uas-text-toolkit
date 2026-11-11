@@ -184,7 +184,7 @@ static void test_alloc_failure(void) {
 static void test_extras(void) {
     TtWordFreq *f = NULL;
     TtStats s;
-    TtText t;
+    TtText t, t2;
     int n = 0;
     char longword[64];
     util_test_begin("Tambahan potong kata, laporan, cipher berkas");
@@ -205,11 +205,35 @@ static void test_extras(void) {
     tt_free_text(&t);
     util_check(tt_cipher_file("tests/tmp_in.txt", "tests/tidak_ada_f/a.txt", 0, 1, "") == ST_FILE_WRITE,
                "cipher tulis gagal -> ST_FILE_WRITE");
+    util_check(tt_cipher_file("tests/pendek.txt", "tests/out_c3.txt", 0, 3, "") == ST_OK,
+               "expected berkas: Caesar pendek.txt");
+    util_check(tt_load_text("tests/out_c3.txt", &t) == ST_OK &&
+               tt_load_text("tests/expected_caesar3.txt", &t2) == ST_OK &&
+               strcmp(t.data, t2.data) == 0, "hasil Caesar = expected dihitung tangan");
+    tt_free_text(&t);
+    tt_free_text(&t2);
+    util_check(tt_cipher_file("tests/pendek.txt", "tests/out_vig.txt", 2, 0, "LEMON") == ST_OK,
+               "expected berkas: Vigenere pendek.txt");
+    util_check(tt_load_text("tests/out_vig.txt", &t) == ST_OK &&
+               tt_load_text("tests/expected_vigenere_lemon.txt", &t2) == ST_OK &&
+               strcmp(t.data, t2.data) == 0, "hasil Vigenere = expected dihitung tangan");
+    tt_free_text(&t);
+    tt_free_text(&t2);
+    util_check(tt_cipher_file("tests/out_c3.txt", "tests/rt_c3.txt", 1, 3, "") == ST_OK &&
+               tt_load_text("tests/rt_c3.txt", &t) == ST_OK &&
+               tt_load_text("tests/pendek.txt", &t2) == ST_OK &&
+               strcmp(t.data, t2.data) == 0, "dekripsi Caesar berkas = pendek.txt");
+    tt_free_text(&t);
+    tt_free_text(&t2);
     util_fail_alloc_after(0);
     util_check(tt_load_text("data/contoh.txt", &t) == ST_NO_MEMORY, "injeksi load");
     util_fail_alloc_after(-1);
-    remove("tests/tmp_in.txt");    remove("tests/tmp_out.txt");
+    remove("tests/tmp_in.txt");
+    remove("tests/tmp_out.txt");
     remove("tests/tmp_rt.txt");
+    remove("tests/out_c3.txt");
+    remove("tests/out_vig.txt");
+    remove("tests/rt_c3.txt");
     util_check(util_test_end() == 0, "tambahan lulus");
 }
 

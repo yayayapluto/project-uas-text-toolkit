@@ -1,5 +1,6 @@
 #include "tt_cipher.h"
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 
 /* Sandi Caesar: geser huruf dengan basis 'A' atau 'a', non-huruf utuh. */
@@ -65,7 +66,7 @@ Status tt_cipher_file(const char *in_path, const char *out_path, int mode,
         s = tt_vigenere(data, key, mode == 3);
     }
     if (s == ST_OK) {
-        s = util_write_file(out_path, data);
+        s = util_write_file(out_path, data, len);
     }
     util_free(data);
     return s;
