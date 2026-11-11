@@ -64,7 +64,7 @@ static void build_words(RepBuf *b, const TtWordFreq *freq, int count) {
 }
 
 /* Membangun isi laporan menurut format PRD Bagian 8.3; isi di buffer
- * dilepas pemanggil dengan util_free. */
+ * dibebaskan pemanggil dengan util_free. */
 static Status build_report(const TtStats *s, const TtWordFreq *freq, int freq_count,
                            const char *source_path, RepBuf *b) {
     b->data = (char *)util_malloc(512);
@@ -74,7 +74,7 @@ static Status build_report(const TtStats *s, const TtWordFreq *freq, int freq_co
     b->cap = 512;
     b->err = ST_OK;
     rb_addf(b, "LAPORAN ANALISIS TEKS\r\n");
-    rb_addf(b, "Sumber   : %s\r\n", source_path != NULL ? source_path : "(teks tanpa berkas)");
+    rb_addf(b, "Sumber   : %s\r\n", source_path != NULL ? source_path : "(teks tanpa file)");
     rb_add(b, "\r\n");
     rb_add(b, "[Statistik]\r\n");
     rb_addf(b, "Karakter : %d\r\n", s->chars);
@@ -90,7 +90,7 @@ static Status build_report(const TtStats *s, const TtWordFreq *freq, int freq_co
     return b->err;
 }
 
-/* Menulis laporan ke layar (out_path NULL) atau ke berkas; isi keduanya
+/* Menulis laporan ke layar (out_path NULL) atau ke file; isi keduanya
  * identik karena dari builder yang sama. */
 Status tt_write_report(const TtStats *s, const TtWordFreq *freq, int freq_count,
                        const char *source_path, const char *out_path) {

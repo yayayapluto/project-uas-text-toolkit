@@ -1,7 +1,7 @@
 #include "tt_text.h"
 #include <string.h>
 
-/* Memuat berkas dan mengisi data, length, serta path sesuai TT-01..TT-03. */
+/* Memuat file dan mengisi data, length, serta path sesuai TT-01..TT-03. */
 Status tt_load_text(const char *path, TtText *out) {
     Status s;
     if (path == NULL || out == NULL) return ST_BAD_INPUT;
@@ -23,7 +23,7 @@ Status tt_load_text(const char *path, TtText *out) {
     return ST_OK;
 }
 
-/* Melepas data dan mengosongkan struct; pemanggilan ganda aman. */
+/* Membebaskan data dan mengosongkan struct; pemanggilan ganda aman. */
 void tt_free_text(TtText *t) {
     if (t == NULL) return;
     util_free(t->data);

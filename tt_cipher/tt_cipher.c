@@ -48,8 +48,8 @@ Status tt_vigenere(char *text, const char *key, int decrypt) {
     return ST_OK;
 }
 
-/* Memproses isi berkas dengan Caesar atau Vigenere lalu menulis hasil;
- * berkas sumber tetap utuh. */
+/* Memproses isi file dengan Caesar atau Vigenere lalu menulis hasil;
+ * file sumber tetap utuh. */
 Status tt_cipher_file(const char *in_path, const char *out_path, int mode,
                       int shift, const char *key) {
     Status s;

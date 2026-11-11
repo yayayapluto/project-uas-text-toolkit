@@ -85,7 +85,7 @@ static Status split_lines(const char *data, size_t n, char ***out, int *count) {
     return ST_OK;
 }
 
-/* Mengisi array TtMatch dan melepas baris yang tidak ikut. */
+/* Mengisi array TtMatch dan membebaskan baris yang tidak ikut. */
 static void fill_matches(TtMatch *matches, char **lines, int count,
                          const char *pattern, int ignore_case, int invert,
                          int *filled) {
@@ -145,7 +145,7 @@ Status tt_grep(const TtText *t, const char *pattern, int ignore_case,
     return ST_OK;
 }
 
-/* Melepas teks tiap match lalu array-nya. */
+/* Membebaskan teks tiap match lalu array-nya. */
 void tt_free_matches(TtMatch *matches, int match_count) {
     int i;
     if (matches == NULL) return;

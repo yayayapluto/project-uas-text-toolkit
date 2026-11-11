@@ -14,7 +14,7 @@ Status tt_caesar(char *text, int shift);
  * decrypt = 1 mengurangi geseran kunci. */
 Status tt_vigenere(char *text, const char *key, int decrypt);
 
-/* Proses berkas ke berkas; berkas sumber tidak diubah. mode:
+/* Proses file ke file; file sumber tidak diubah. mode:
  * 0 = Caesar enkripsi, 1 = Caesar dekripsi, 2 = Vigenere enkripsi,
  * 3 = Vigenere dekripsi. Kembali ST_FILE_NOT_FOUND, ST_FILE_EMPTY,
  * ST_BAD_INPUT, ST_FILE_WRITE, atau ST_NO_MEMORY. */

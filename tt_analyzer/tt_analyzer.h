@@ -32,7 +32,7 @@ Status tt_compute_stats(const char *text, TtStats *out);
 /* Menghitung frekuensi kata unik (huruf kecil, kata > 39 karakter
  * dipotong 39 karakter pertama). Array mulai kapasitas 16 dan digandakan
  * lewat util_realloc; pengecekan kata memakai Sequential Search. Array
- * dilepas pemanggil dengan util_free. */
+ * dibebaskan pemanggil dengan util_free. */
 Status tt_word_frequency(const char *text, TtWordFreq **out, int *count);
 
 /* Selection Sort frekuensi dari terbanyak; tie diurut alfabetis. */
