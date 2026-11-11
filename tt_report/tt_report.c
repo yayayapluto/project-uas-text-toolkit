@@ -1,54 +1,114 @@
 #include "tt_report.h"
-#include "tt_text.h"
-#include "tt_analyzer.h"
-#include "tt_cipher.h"
-#include "common.h"
+#include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-static char *build_report(const char *text, const TtStats *s, const TtWordFreq *words, int word_count) {
-    if (text == NULL) return NULL;
-    size_t text_len = strlen(text);
-    size_t sz = 64 + text_len + 64 + (word_count > 0 ? word_count * 32 : 0);
-    char *buf = (char *)util_malloc(sz);
-    if (buf == NULL) return NULL;
-    int n = snprintf(buf, sz, "LAPISAN TEKS\n");
-    if (n < 0) { util_free(buf); return NULL; }
-    size_t off = (size_t)n;
-    size_t remain = sz - off - 1;
-    size_t copylen = text_len < remain ? text_len : remain - 1;
-    memcpy(buf + off, text, copylen);
-    off += copylen;
-    buf[off] = '\0';
-    if (s != NULL) {
-        char tmp[64];
-        int wn = snprintf(tmp, sizeof tmp, "\nStats: lines=%d words=%d chars=%d", s->lines, s->words, s->chars);
-        if (wn > 0) { size_t need = (size_t)wn + 1; if (off + need < sz) { memcpy(buf + off, tmp, wn); off += wn; } }
-    }
-    if (words != NULL && word_count > 0) {
-        char tmp[128];
-        int wn = snprintf(tmp, sizeof tmp, "\nKata (teratas):");
-        if (wn > 0) { size_t need = (size_t)wn + 1; if (off + need < sz) { memcpy(buf + off, tmp, wn); off += wn; } }
-        for (int i = 0; i < word_count; i++) {
-            int wn = snprintf(tmp, sizeof tmp, "\n  %s: %d", words[i].word, words[i].count);
-            if (wn > 0) {
-                size_t need = (size_t)wn + 1;
-                if (off + need < sz) { memcpy(buf + off, tmp, wn); off += wn; }
-            }
+/* Builder lokal: buffer string yang tumbuh lewat util_realloc. */
+typedef struct {
+    char *data;
+    size_t len;
+    size_t cap;
+    Status err;
+} RepBuf;
+
+/* Menambahkan teks NUL-terminated ke buffer; menggandakan kapasitas
+ * bila perlu. Kegagalan alokasi menandai err ST_NO_MEMORY. */
+static void rb_add(RepBuf *b, const char *s) {
+    size_t add = strlen(s);
+    while (b->err == ST_OK && b->len + add + 1 > b->cap) {
+        char *tmp;
+        b->cap *= 2;
+        tmp = (char *)util_realloc(b->data, b->cap);
+        if (tmp == NULL) {
+            b->err = ST_NO_MEMORY;
+            return;
         }
+        b->data = tmp;
     }
-    buf[off] = '\0';
-    return buf;
+    if (b->err == ST_OK) {
+        memcpy(b->data + b->len, s, add + 1);
+        b->len += add;
+    }
 }
 
-Status tt_write_report(const char *path, const TtText *t, const TtStats *s,
-                       const TtWordFreq *words, int word_count) {
-    if (path == NULL || t == NULL) return ST_BAD_INPUT;
-    char *buf = build_report(t->data, s, words, word_count);
-    if (buf == NULL) return ST_NO_MEMORY;
-    size_t len = strlen(buf);
-    Status s2 = util_write_file(path, buf, len);
-    util_free(buf);
-    return s2;
+/* Menambahkan teks berformat printf ke buffer. */
+static void rb_addf(RepBuf *b, const char *fmt, ...) {
+    char line[512];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(line, sizeof(line), fmt, args);
+    va_end(args);
+    rb_add(b, line);
+}
+
+/* Menambahkan frekuensi huruf non-nol ke builder. */
+static void build_letters(RepBuf *b, const TtStats *s) {
+    int i;
+    for (i = 0; i < 26; i++) {
+        if (s->letters[i] > 0) {
+            rb_addf(b, "%c %d\r\n", 'A' + i, s->letters[i]);
+        }
+    }
+}
+
+/* Menambahkan daftar kata terurut (terbanyak dulu, bernomor). */
+static void build_words(RepBuf *b, const TtWordFreq *freq, int count) {
+    int i;
+    if (count == 0) {
+        rb_add(b, "(tidak ada kata)\r\n");
+        return;
+    }
+    for (i = 0; i < count; i++) {
+        rb_addf(b, "%d. %s %d\r\n", i + 1, freq[i].word, freq[i].count);
+    }
+}
+
+/* Membangun isi laporan menurut format PRD Bagian 8.3; isi di buffer
+ * dilepas pemanggil dengan util_free. */
+static Status build_report(const TtStats *s, const TtWordFreq *freq, int freq_count,
+                           const char *source_path, RepBuf *b) {
+    b->data = (char *)util_malloc(512);
+    if (b->data == NULL) return ST_NO_MEMORY;
+    b->data[0] = '\0';
+    b->len = 0;
+    b->cap = 512;
+    b->err = ST_OK;
+    rb_addf(b, "LAPORAN ANALISIS TEKS\r\n");
+    rb_addf(b, "Sumber   : %s\r\n", source_path != NULL ? source_path : "(teks tanpa berkas)");
+    rb_add(b, "\r\n");
+    rb_add(b, "[Statistik]\r\n");
+    rb_addf(b, "Karakter : %d\r\n", s->chars);
+    rb_addf(b, "Kata     : %d\r\n", s->words);
+    rb_addf(b, "Kalimat  : %d\r\n", s->sentences);
+    rb_addf(b, "Baris    : %d\r\n", s->lines);
+    rb_add(b, "\r\n");
+    rb_add(b, "[Frekuensi huruf]\r\n");
+    build_letters(b, s);
+    rb_add(b, "\r\n");
+    rb_add(b, "[Frekuensi kata]\r\n");
+    build_words(b, freq, freq_count);
+    return b->err;
+}
+
+/* Menulis laporan ke layar (out_path NULL) atau ke berkas; isi keduanya
+ * identik karena dari builder yang sama. */
+Status tt_write_report(const TtStats *s, const TtWordFreq *freq, int freq_count,
+                       const char *source_path, const char *out_path) {
+    RepBuf b;
+    Status st;
+    if (s == NULL) return ST_BAD_INPUT;
+    b.data = NULL;
+    b.len = 0;
+    b.cap = 0;
+    b.err = ST_OK;
+    st = build_report(s, freq, freq_count, source_path, &b);
+    if (st == ST_OK) {
+        if (out_path == NULL) {
+            fputs(b.data, stdout);
+        } else {
+            st = util_write_file(out_path, b.data, b.len);
+        }
+    }
+    util_free(b.data);
+    return st;
 }
