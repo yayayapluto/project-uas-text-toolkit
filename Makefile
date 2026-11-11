@@ -9,7 +9,7 @@ SRC = tt_main.c text_toolkit.c tt_tests.c \
       tt_analyzer/tt_analyzer.c \
       tt_cipher/tt_cipher.c \
       tt_report/tt_report.c \
-      ui/ttui.c
+      common/ui.c
 
 EXE = text_toolkit
 

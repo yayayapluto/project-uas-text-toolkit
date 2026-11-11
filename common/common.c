@@ -1,4 +1,5 @@
 #include "common.h"
+#include "ui.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,11 +64,11 @@ Status util_read_int(const char *prompt, int min, int max, int *out) {
         errno = 0;
         lv = strtol(buf, &end, 10);
         if (end == buf || *end != '\0' || errno == ERANGE) {
-            printf("Masukkan bilangan bulat utuh (%d sampai %d).\n", min, max);
+            ui_warn("Masukkan bilangan bulat utuh (%d sampai %d).", min, max);
             continue;
         }
         if (lv < (long)min || lv > (long)max) {
-            printf("Nilai harus %d sampai %d.\n", min, max);
+            ui_warn("Nilai harus %d sampai %d.", min, max);
             continue;
         }
         *out = (int)lv;

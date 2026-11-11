@@ -8,7 +8,7 @@ gcc -std=c99 -Wall -Wextra -Wpedantic -g -I. ^
     tt_analyzer\tt_analyzer.c ^
     tt_cipher\tt_cipher.c ^
     tt_report\tt_report.c ^
-    ui\ttui.c ^
+    common\ui.c ^
     -lm -o text_toolkit.exe
 if errorlevel 1 (
     echo Build gagal.

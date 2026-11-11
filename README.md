@@ -23,6 +23,23 @@ make
 Tanpa argumen program membuka menu utama; argumen `--test` menjalankan
 test harness U01-U17 dan keluar dengan kode 0 saat lulus.
 
+## Tampilan terminal
+
+Semua tampilan memakai tampilan terminal yang murni ASCII dengan lebar
+78 kolom: bingkai dan pemisah `+ - | =`, tanpa ANSI, tanpa box drawing
+Unicode, sehingga aman di cmd.exe maupun PowerShell.
+
+- Setiap menu dibuka dengan garis, judul, dan baris status ("File aktif:
+  contoh.txt (403 karakter)" atau "Belum ada file dimuat").
+- Pesan seragam: `[OK]`, `[i]`, `[!]`, dan `[Error]`.
+- Pertanyaan ya/tidak berbentuk `Abaikan huruf besar/kecil? [Y/n]`;
+  jawaban y, ya, n, tidak, atau kosong (memilih bawaan).
+- Path ditempel dengan tanda kutip otomatis dibersihkan.
+- Hasil panjang (grep) ditampilkan maksimal 40 baris lalu diringkas
+  "... dan N lainnya (tidak ditampilkan)"; baris yang lebar dipotong
+  dengan "..." dan tidak memotong karakter UTF-8 di tengah.
+- Kolom angka diratakan kanan; teks rata kiri.
+
 ## Format file
 
 - File masukan dan keluaran berupa teks biasa (ASCII/UTF-8 per byte).

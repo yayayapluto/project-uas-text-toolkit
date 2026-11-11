@@ -1,4 +1,5 @@
 #include "tt_cipher.h"
+#include "../common/ui.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
@@ -72,7 +73,8 @@ Status tt_cipher_file(const char *in_path, const char *out_path, int mode,
     return s;
 }
 
-/* Brute force: satu baris per geser 0..25 dengan salinan teks. */
+/* Brute force: satu baris per geser 0..25 dengan salinan teks; teks
+ * panjang dipotong di layar agar tidak meluber. */
 void tt_caesar_brute(const char *text) {
     char *buf;
     size_t len;
@@ -81,13 +83,15 @@ void tt_caesar_brute(const char *text) {
     len = strlen(text);
     buf = (char *)util_malloc(len + 1);
     if (buf == NULL) {
-        printf("Memori tidak cukup untuk brute force.\n");
+        ui_error("Memori tidak cukup untuk brute force.");
         return;
     }
     for (shift = 0; shift < 26; shift++) {
         strcpy(buf, text);
         tt_caesar(buf, shift);
-        printf("Geser %2d: %s\n", shift, buf);
+        printf("Geser %2d : ", shift);
+        ui_print_truncated(buf, UI_WIDTH - 11);
+        putchar('\n');
     }
     util_free(buf);
 }
