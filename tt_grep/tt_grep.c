@@ -1,122 +1,145 @@
 #include "tt_grep.h"
-#include "tt_text.h"
-#include "common.h"
+#include "../common/common.h"
 #include <string.h>
 #include <ctype.h>
 
-void cleanup_lines(char **lines, int count);
-
-static int line_contains_pattern(const char *line, const char *pattern, int ignore_case, int *out_occurrences) {
-    if (line == NULL || pattern == NULL || *pattern == '\0') {
-        if (out_occurrences) *out_occurrences = 0;
-        return 0;
-    }
-    size_t lp = strlen(line);
-    size_t mp = strlen(pattern);
-    if (mp > lp) {
-        if (out_occurrences) *out_occurrences = 0;
-        return 0;
-    }
-    int found = 0;
-    int total = 0;
-    for (size_t i = 0; i <= lp - mp; i++) {
-        int match = 1;
-        for (size_t j = 0; j < mp; j++) {
-            char lc = line[i+j];
-            char pc = pattern[j];
-            if (ignore_case) {
-                lc = tolower((unsigned char)lc);
-                pc = tolower((unsigned char)pc);
-            }
-            if (lc != pc) { match = 0; break; }
+/* Memeriksa apakah pattern muncul mulai dari posisi i pada line;
+ * pembanding per karakter dengan tolower bila ignore_case. */
+static int match_at(const char *line, size_t i, const char *pattern,
+                    int ignore_case) {
+    size_t j;
+    for (j = 0; pattern[j] != '\0'; j++) {
+        char lc = line[i + j];
+        char pc = pattern[j];
+        if (ignore_case) {
+            lc = (char)tolower((unsigned char)lc);
+            pc = (char)tolower((unsigned char)pc);
         }
-        if (match) {
-            found = 1;
-            total++;
-            /* skip past this match to avoid overlapping? prompt says "hanya kemunculan pertama per baris" so we break after first */
-            break;
-        }
-    }
-    if (out_occurrences) *out_occurrences = total;
-    return found;
-}
-
-static int split_into_lines(const char *data, size_t n, char ***lines, int *line_count) {
-    *line_count = 0;
-    if (data == NULL || n == 0) return 0;
-    /* count lines: number of '\n' + 1 if last char not \n, else just \n count */
-    size_t nl = 0;
-    for (size_t i = 0; i < n; i++) if (data[i] == '\n') nl++;
-    *line_count = (n > 0 && data[n-1] != '\n') ? nl + 1 : nl;
-    if (*line_count == 0) return 0;
-    *lines = (char **)util_malloc((size_t)(*line_count) * sizeof(char *));
-    if (*lines == NULL) return 0;
-    size_t start = 0;
-    for (int i = 0; i < *line_count; i++) {
-        size_t end = start;
-        while (end < n && data[end] != '\n') end++;
-        size_t len = end - start;
-        (*lines)[i] = (char *)util_malloc(len + 1);
-        memcpy((*lines)[i], data + start, len);
-        (*lines)[i][len] = '\0';
-        /* strip \r */
-        size_t l = len;
-        while (l > 0 && (*lines)[i][l-1] == '\r') (*lines)[i][--l] = '\0';
-        (*lines)[i][l] = '\0';
-        start = end + 1;
+        if (lc != pc) return 0;
     }
     return 1;
 }
 
-Status tt_grep(const TtText *t, const char *pattern, int ignore_case,
-               int invert, TtMatch **matches, int *match_count, int *total_occurrences) {
-    if (t == NULL || t->data == NULL || pattern == NULL || matches == NULL || match_count == NULL || total_occurrences == NULL)
-        return ST_BAD_INPUT;
-
-    char **lines = NULL;
-    int line_count = 0;
-    if (!split_into_lines(t->data, t->n, &lines, &line_count)) return ST_BAD_INPUT;
-
-    *total_occurrences = 0;
-    *match_count = 0;
-
-    /* first pass: compute total occurrences */
-    for (int i = 0; i < line_count; i++) {
-        int occ = 0;
-        line_contains_pattern(lines[i], pattern, ignore_case, &occ);
-        *total_occurrences += occ;
+/* Menghitung seluruh kemunculan pattern pada satu baris. */
+static int count_occurrences(const char *line, const char *pattern,
+                             int ignore_case) {
+    size_t len, plen, i;
+    int total = 0;
+    if (line == NULL || pattern == NULL) return 0;
+    len = strlen(line);
+    plen = strlen(pattern);
+    if (plen == 0 || plen > len) return 0;
+    for (i = 0; i + plen <= len; i++) {
+        if (match_at(line, i, pattern, ignore_case)) total++;
     }
+    return total;
+}
 
-    /* allocate matches array */
-    *matches = (TtMatch *)util_malloc((size_t)line_count * sizeof(TtMatch));
-    if (*matches == NULL) { *match_count = 0; cleanup_lines(lines, line_count); return ST_NO_MEMORY; }
-    *match_count = 0;
-
-    /* second pass: fill matches */
-    for (int i = 0; i < line_count; i++) {
-        int contains = line_contains_pattern(lines[i], pattern, ignore_case, NULL);
-        if (invert) {
-            if (!contains) {
-                (*matches)[*match_count].line = lines[i];
-                (*match_count)++;
-            } else {
-                /* free line we won't use? we still own lines, but we'll return them; for simplicity just null it and free later */
-                (*matches)[*match_count].line = NULL;
-            }
-        } else {
-            if (contains) {
-                (*matches)[*match_count].line = lines[i];
-                (*match_count)++;
-            }
+/* Memecah teks menjadi baris-baris tanpa \r maupun \n.
+ * Kembali ST_OK, ST_NO_MEMORY, atau ST_BAD_INPUT saat teks kosong. */
+static Status split_lines(const char *data, size_t n, char ***out, int *count) {
+    size_t nl = 0, i, start;
+    char **lines;
+    *out = NULL;
+    *count = 0;
+    if (data == NULL || n == 0) return ST_BAD_INPUT;
+    for (i = 0; i < n; i++) {
+        if (data[i] == '\n') nl++;
+    }
+    *count = (data[n - 1] != '\n') ? (int)nl + 1 : (int)nl;
+    if (*count == 0) return ST_BAD_INPUT;
+    lines = (char **)util_malloc((size_t)*count * sizeof(char *));
+    if (lines == NULL) return ST_NO_MEMORY;
+    start = 0;
+    for (i = 0; i < (size_t)*count; i++) {
+        size_t end = start, len, j;
+        while (end < n && data[end] != '\n') end++;
+        len = end - start;
+        while (len > 0 && data[start + len - 1] == '\r') len--;
+        lines[i] = (char *)util_malloc(len + 1);
+        if (lines[i] == NULL) {
+            for (j = 0; j < i; j++) util_free(lines[j]);
+            util_free(lines);
+            *out = NULL;
+            *count = 0;
+            return ST_NO_MEMORY;
         }
+        memcpy(lines[i], data + start, len);
+        lines[i][len] = '\0';
+        start = end + 1;
     }
-
-    cleanup_lines(lines, line_count);
+    *out = lines;
     return ST_OK;
 }
 
-void cleanup_lines(char **lines, int count) {
-    if (lines == NULL) return;
-    for (int i = 0; i < count; i++) util_free(lines[i]);
+/* Menghitung jumlah baris yang memenuhi kriteria (cocok atau invert). */
+static int count_target_lines(char **lines, int count, const char *pattern,
+                              int ignore_case, int invert) {
+    int i, hit = 0;
+    for (i = 0; i < count; i++) {
+        int has = count_occurrences(lines[i], pattern, ignore_case) > 0;
+        if (has != invert) hit++;
+    }
+    return hit;
+}
+
+/* Mengisi array TtMatch dan melepas baris yang tidak ikut. */
+static void fill_matches(TtMatch *matches, char **lines, int count,
+                         const char *pattern, int ignore_case, int invert,
+                         int *filled) {
+    int i;
+    *filled = 0;
+    for (i = 0; i < count; i++) {
+        int has = count_occurrences(lines[i], pattern, ignore_case) > 0;
+        if (has != invert) {
+            matches[*filled].line = lines[i];
+            (*filled)++;
+        } else {
+            util_free(lines[i]);
+            lines[i] = NULL;
+        }
+    }
+}
+
+/* Pencarian baris sesuai kontrak grep mini di tt_grep.h. */
+Status tt_grep(const TtText *t, const char *pattern, int ignore_case,
+               int invert, TtMatch **matches, int *match_count, int *total_occurrences) {
+    char **lines;
+    int count, target, filled = 0, i;
+    TtMatch *arr;
+    if (t == NULL || t->data == NULL || pattern == NULL || matches == NULL ||
+        match_count == NULL || total_occurrences == NULL) return ST_BAD_INPUT;
+    if (pattern[0] == '\0') return ST_BAD_INPUT;
+    *matches = NULL;
+    *match_count = 0;
+    *total_occurrences = 0;
+    if (split_lines(t->data, t->n, &lines, &count) != ST_OK) return ST_BAD_INPUT;
+    for (i = 0; i < count; i++) {
+        *total_occurrences += count_occurrences(lines[i], pattern, ignore_case);
+    }
+    target = count_target_lines(lines, count, pattern, ignore_case, invert);
+    if (target == 0) {
+        for (i = 0; i < count; i++) util_free(lines[i]);
+        util_free(lines);
+        return ST_OK;
+    }
+    arr = (TtMatch *)util_malloc((size_t)target * sizeof(TtMatch));
+    if (arr == NULL) {
+        for (i = 0; i < count; i++) util_free(lines[i]);
+        util_free(lines);
+        return ST_NO_MEMORY;
+    }
+    fill_matches(arr, lines, count, pattern, ignore_case, invert, &filled);
     util_free(lines);
+    *matches = arr;
+    *match_count = filled;
+    return ST_OK;
+}
+
+/* Melepas teks tiap match lalu array-nya. */
+void tt_free_matches(TtMatch *matches, int match_count) {
+    int i;
+    if (matches == NULL) return;
+    for (i = 0; i < match_count; i++) util_free(matches[i].line);
+    util_free(matches);
 }
