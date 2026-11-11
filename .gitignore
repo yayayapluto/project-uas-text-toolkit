@@ -1,0 +1,8 @@
+*.exe
+*.o
+*.obj
+*.d
+text_toolkit_asan
+text_toolkit_asan.exe
+.asan/
+*.stackdump
