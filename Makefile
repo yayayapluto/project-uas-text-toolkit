@@ -8,18 +8,15 @@ SRC = tt_main.c text_toolkit.c tt_tests.c \
       tt_grep/tt_grep.c \
       tt_analyzer/tt_analyzer.c \
       tt_cipher/tt_cipher.c \
-      tt_report/tt_report.c
+      tt_report/tt_report.c \
+      ui/ttui.c
 
 EXE = text_toolkit
-DEMO = ttui_demo
 
-all: $(EXE) $(DEMO)
+all: $(EXE)
 
 $(EXE): $(SRC)
 	$(CC) $(CFLAGS) $(SRC) -o $(EXE) $(LDLIBS)
-
-$(DEMO): ttui_demo.c ui/ttui.c common/common.c
-	$(CC) $(CFLAGS) ttui_demo.c ui/ttui.c common/common.c -o $(DEMO) $(LDLIBS)
 
 test: $(EXE)
 	./$(EXE) --test
@@ -29,4 +26,4 @@ asan:
 	./text_toolkit_asan --test
 
 clean:
-	-rm $(EXE) $(DEMO) text_toolkit_asan
+	-rm $(EXE) text_toolkit_asan

@@ -5,6 +5,7 @@
 #include "tt_analyzer/tt_analyzer.h"
 #include "tt_cipher/tt_cipher.h"
 #include "tt_report/tt_report.h"
+#include "ui/ttui.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -270,11 +271,17 @@ static void state_free(MenuState *st) {
     analysis_invalidate(st);
 }
 
-/* Menu utama Text Toolkit; keluar (0 atau EOF\) membebaskan semua memori. */
+/* Menu utama Text Toolkit; keluar (0 atau EOF) membebaskan semua memori. */
 void run_text_toolkit(void) {
     MenuState st;
     int pilihan;
+    const char *banner[] = {
+        "Mini grep, analisis teks, sandi, dan laporan",
+        "Ketik angka menu di bawah; 0 untuk keluar"
+    };
     memset(&st, 0, sizeof(st));
+    ttui_panel("TEXT TOOLKIT", banner, 2, TTUI_ACCENT_R, TTUI_ACCENT_G, TTUI_ACCENT_B);
+    printf("\n");
     for (;;) {
         printf("=== TEXT TOOLKIT ===\n");
         printf("1. Muat file teks\n");
