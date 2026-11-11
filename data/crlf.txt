@@ -1,5 +1,5 @@
-Halo dunia. Ini berkas contoh untuk projek Text Toolkit.
-Dunia pemrograman C itu seru, apalagi saat kode berjalan tanpa galat!
+Halo dunia. Ini file contoh untuk projek Text Toolkit.
+Dunia pemrograman C itu seru, apalagi saat kode berjalan tanpa error!
 
 Pada tahun 2026, kelas Dasar Pemrograman mempelajari array, string,
 pointer, struct, searching, dan sorting. Praktikum dimulai pukul 08.00.

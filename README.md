@@ -1,6 +1,6 @@
 # Text Toolkit
 
-Program menu berbahasa C99 untuk mengolah berkas teks: mini grep, analisis
+Program menu berbahasa C99 untuk mengolah file teks: mini grep, analisis
 teks, Binary Search kata, sandi Caesar/Vigenere, serta palindrom dan reverse.
 Projek UAS Dasar Pemrograman (INF124102), Ganjil 2026/2027.
 
@@ -23,14 +23,14 @@ make
 Tanpa argumen program membuka menu utama; argumen `--test` menjalankan
 test harness U01-U17 dan keluar dengan kode 0 saat lulus.
 
-## Format berkas
+## Format file
 
-- Berkas masukan dan keluaran adalah berkas teks biasa (ASCII/UTF-8 per byte).
+- File masukan dan keluaran berupa teks biasa (ASCII/UTF-8 per byte).
 - `data/contoh.txt` teks demo; `data/kosong.txt` 0 byte; `data/satu_baris.txt`
   satu baris tanpa `\n` akhir; `data/crlf.txt` isi `contoh.txt` dengan akhir
   baris `\r\n` (dijaga byte-persis lewat `.gitattributes`).
 - Laporan (`tt_write_report`) memuat path sumber, statistik, frekuensi huruf,
-  dan frekuensi kata terurut (lihat `data` laporan pada menu 6).
+  dan frekuensi kata terurut (dibuat dari menu 6).
 
 ## Daftar fungsi publik
 
@@ -43,7 +43,7 @@ test harness U01-U17 dan keluar dengan kode 0 saat lulus.
 | `tt_report` | `tt_write_report` |
 | `text_toolkit` | `run_text_toolkit`, `test_text_toolkit` |
 
-Pustaka bersama di `common/`: `Status`, `UTIL_MAX_LINE`, `UTIL_MAX_PATH`,
+Library bersama di `common/`: `Status`, `UTIL_MAX_LINE`, `UTIL_MAX_PATH`,
 `util_read_line`, `util_read_int`, `util_trim`, `util_to_lower`,
 `util_stricmp`, `util_read_file`, `util_write_file`, `util_malloc` sampai
 `util_free`, pelacak alokasi, dan test harness (`util_test_begin`, `util_check`,
@@ -53,21 +53,30 @@ Pustaka bersama di `common/`: `Status`, `UTIL_MAX_LINE`, `UTIL_MAX_PATH`,
 
 `--test` menjalankan U01-U17 sesuai PRD Bagian 12.2 ditambah uji tambahan:
 grep invert, palindrom string kosong, kata 41 huruf dipotong 39, geser negatif
-Caesar, pola grep kosong, laporan ke folder yang tidak ada, dan proses berkas
-ke berkas dibandingkan dengan `tests/expected_caesar3.txt` serta
+Caesar, pola grep kosong, laporan ke folder yang tidak ada, dan proses file
+ke file dibandingkan dengan `tests/expected_caesar3.txt` serta
 `tests/expected_vigenere_lemon.txt` yang dihitung terpisah dari program.
 Setiap kelompok uji diakhiri `util_alloc_balance() == 0`.
+
+## Keputusan istilah
+
+Istilah teknis dipakai dalam bentuk yang lazim di kalangan pemrogram dan
+konsisten di seluruh kode, komentar, dan dokumen ini: file (bukan berkas),
+error (bukan galat), library (bukan pustaka), free untuk pelepasan memori
+(`util_free`), serta string, pointer, array, struct, buffer, dan histogram.
+Kata domain aplikasi tetap dalam bahasa Indonesia: teks, baris, kalimat,
+kata, huruf, statistik, frekuensi, laporan, dan menu.
 
 ## Keputusan desain
 
 1. Menu 3 punya sub-menu (statistik, histogram, frekuensi kata, Binary Search)
    karena PRD tidak menetapkan satu layar untuk keempat analisis.
 2. Test harness diletakkan di `tt_tests.c` (bukan `text_toolkit.c`) agar
-   kedua berkas tetap di bawah 400 baris; pintu masuknya tetap
+   kedua file tetap di bawah 400 baris; pintu masuknya tetap
    `test_text_toolkit()` yang dideklarasikan di `text_toolkit.h`.
 3. Report builder tunggal di `tt_report.c` dipakai untuk keluaran layar
-   (nama berkas kosong di menu 6) dan berkas, sehingga isi keduanya identik.
-4. Kata adalah deretan huruf/angka; apostrof dianggap pemisah; karakter
-   statistik tidak menghitung `\n` dan `\r`.
+   (nama file kosong di menu 6) dan file, sehingga isi keduanya identik.
+4. Kata adalah deretan huruf/angka; apostrof dianggap pemisah; hitungan
+   karakter tidak memasukkan `\n` dan `\r`.
 5. Laporan memakai akhir baris `\r\n` agar tampil sama di Windows dan
    editor Unix.
