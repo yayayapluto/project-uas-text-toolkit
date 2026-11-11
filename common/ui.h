@@ -72,4 +72,8 @@ void ui_strip_quotes(char *s);
  * max_cols; tidak pernah memotong di tengah karakter UTF-8. */
 void ui_print_truncated(const char *s, int max_cols);
 
+/* Menyalin s terpotong ke out dengan "..." bila terpotong (batas
+ * karakter UTF-8 aman); kembali lebar kolom hasil. */
+int ui_truncate(const char *s, int max_cols, char *out, size_t size);
+
 #endif

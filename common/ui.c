@@ -212,18 +212,28 @@ Status ui_read_path(const char *prompt, char *buf, size_t size) {
     }
 }
 
-/* Mencetak s terpotong: bila lebar muat dicetak utuh, jika tidak dicetak
- * sampai batas max_cols - 3 lalu "..."; potongan mundur ke batas
- * karakter UTF-8 supaya tidak terbelah. */
-void ui_print_truncated(const char *s, int max_cols) {
+/* Menyalin s terpotong ke out (size-1 byte maksimal) dengan akhiran "..."
+ * bila terpotong; potongan mundur ke batas karakter UTF-8 supaya tidak
+ * terbelah. Kembali lebar kolom hasil. */
+int ui_truncate(const char *s, int max_cols, char *out, size_t size) {
     int total, limit, used = 0;
-    size_t cut = 0, i;
-    if (s == NULL) return;
-    if (max_cols <= 0) return;
+    size_t cut = 0, i, olen = 0;
+    if (s == NULL || out == NULL || size == 0) {
+        if (out != NULL && size > 0) out[0] = '\0';
+        return 0;
+    }
+    if (max_cols <= 0) {
+        out[0] = '\0';
+        return 0;
+    }
     total = ui_width(s);
     if (total <= max_cols) {
-        fputs(s, stdout);
-        return;
+        while (s[olen] != '\0' && olen < size - 1) {
+            out[olen] = s[olen];
+            olen++;
+        }
+        out[olen] = '\0';
+        return total;
     }
     limit = max_cols - 3;
     for (i = 0; s[i] != '\0'; i++) {
@@ -236,6 +246,24 @@ void ui_print_truncated(const char *s, int max_cols) {
         used++;
         i = end;
     }
-    fwrite(s, 1, cut, stdout);
-    fputs("...", stdout);
+    if (cut > size - 4) cut = size - 4;
+    for (i = 0; i < cut; i++) out[i] = s[i];
+    out[cut] = '.';
+    out[cut + 1] = '.';
+    out[cut + 2] = '.';
+    out[cut + 3] = '\0';
+    return used + 3;
+}
+
+/* Mencetak s terpotong: bila lebar muat dicetak utuh, jika tidak dicetak
+ * sampai batas max_cols - 3 lalu "...". */
+void ui_print_truncated(const char *s, int max_cols) {
+    char buf[UI_WIDTH + 4];
+    if (s == NULL || max_cols <= 0) return;
+    if (max_cols > UI_WIDTH) {
+        fputs(s, stdout);
+        return;
+    }
+    (void)ui_truncate(s, max_cols, buf, sizeof buf);
+    fputs(buf, stdout);
 }

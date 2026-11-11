@@ -152,21 +152,25 @@ static Status analysis_run(MenuState *st) {
 }
 
 /* Tabel frekuensi kata: kolom kata rata kiri, jumlah rata kanan; header
- * memakai lebar kolom yang sama agar garis | simetris. */
+ * memakai lebar kolom yang sama agar garis | simetris; kata yang lebih
+ * lebar dari kolom dipotong dengan "...". */
 static void freq_print(const TtWordFreq *f, int count) {
+    char cell[UI_WIDTH + 4];
     int w = 0, cw = 0, i;
     for (i = 0; i < count; i++) {
-        size_t len = strlen(f[i].word);
-        if ((int)len > w) w = (int)len;
+        int dw = ui_truncate(f[i].word, UI_WIDTH, cell, sizeof(cell));
+        if (dw > w) w = dw;
         if (num_digits(f[i].count) > cw) cw = num_digits(f[i].count);
     }
     if (w < 4) w = 4;
     if (cw < 6) cw = 6;
+    if (w > UI_WIDTH - 4 - cw) w = UI_WIDTH - 4 - cw;
     ui_section("Frekuensi kata (terbanyak dulu)");
     printf(" %-*s | %*s\n", w, "Kata", cw, "Jumlah");
     ui_rule();
     for (i = 0; i < count; i++) {
-        printf(" %-*s | %*d\n", w, f[i].word, cw, f[i].count);
+        (void)ui_truncate(f[i].word, w, cell, sizeof(cell));
+        printf(" %-*s | %*d\n", w, cell, cw, f[i].count);
     }
 }
 
