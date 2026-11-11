@@ -1,1 +1,8 @@
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Kata dengan ! dan ? sudah termasuk. Kalimat berakhir tanpa tanda tapi masih memiliki kata.
+Halo dunia. Ini berkas contoh untuk projek Text Toolkit.
+Dunia pemrograman C itu seru, apalagi saat kode berjalan tanpa galat!
+
+Pada tahun 2026, kelas Dasar Pemrograman mempelajari array, string,
+pointer, struct, searching, dan sorting. Praktikum dimulai pukul 08.00.
+
+Kata MATAHARI dan matahari harus dihitung sebagai kata yang sama?
+Program ini membedakan huruf besar, huruf kecil, angka 123, dan tanda baca.
