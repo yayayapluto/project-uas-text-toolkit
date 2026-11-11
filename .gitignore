@@ -6,3 +6,9 @@ text_toolkit_asan
 text_toolkit_asan.exe
 .asan/
 *.stackdump
+.agents/
+docs/
+AGENTS.md
+prompt_*.md
+skills-lock.json
+
