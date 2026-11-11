@@ -49,7 +49,6 @@ Status tt_compute_stats(const char *text, TtStats *out) {
         if (c >= 'a' && c <= 'z') out->letters[c - 'a']++;
         else if (c >= 'A' && c <= 'Z') out->letters[c - 'A']++;
     }
-    if (out->lines == 0 && out->chars > 0) out->lines = 1;
     if (out->chars > 0 && text[strlen(text) - 1] != '\n') out->lines++;
     if (word_seen_since_end && !prev_was_end) out->sentences++;
     return ST_OK;
