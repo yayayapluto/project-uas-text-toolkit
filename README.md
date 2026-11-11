@@ -58,15 +58,6 @@ ke file dibandingkan dengan `tests/expected_caesar3.txt` serta
 `tests/expected_vigenere_lemon.txt` yang dihitung terpisah dari program.
 Setiap kelompok uji diakhiri `util_alloc_balance() == 0`.
 
-## Keputusan istilah
-
-Istilah teknis dipakai dalam bentuk yang lazim di kalangan pemrogram dan
-konsisten di seluruh kode, komentar, dan dokumen ini: file (bukan berkas),
-error (bukan galat), library (bukan pustaka), free untuk pelepasan memori
-(`util_free`), serta string, pointer, array, struct, buffer, dan histogram.
-Kata domain aplikasi tetap dalam bahasa Indonesia: teks, baris, kalimat,
-kata, huruf, statistik, frekuensi, laporan, dan menu.
-
 ## Keputusan desain
 
 1. Menu 3 punya sub-menu (statistik, histogram, frekuensi kata, Binary Search)
