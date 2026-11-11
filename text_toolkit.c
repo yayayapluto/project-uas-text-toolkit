@@ -204,7 +204,8 @@ static void analysis_search_word(const MenuState *st) {
     util_free(sorted);
 }
 
-/* Sub-menu 3: statistik, histogram, frekuensi kata, binary search. */
+/* Sub-menu 3: statistik, histogram, frekuensi kata, binary search.
+ * Tiap pilihan membuka layar sendiri lalu jeda kembali ke sub-menu. */
 static void menu_analyze(MenuState *st) {
     int pilihan;
     char status[UTIL_MAX_LINE];
@@ -214,8 +215,8 @@ static void menu_analyze(MenuState *st) {
     }
     status_text(st, status, sizeof(status));
     for (;;) {
-        printf("\n");
-        ui_screen_header("Analisis teks", status);
+        ui_clear();
+        ui_screen_header("Text Toolkit > Analisis teks", status);
         ui_menu_item(1, "Statistik");
         ui_menu_item(2, "Histogram huruf");
         ui_menu_item(3, "Frekuensi kata");
@@ -224,8 +225,11 @@ static void menu_analyze(MenuState *st) {
         ui_rule();
         if (!menu_choice(0, 4, &pilihan)) return;
         if (pilihan == 0) break;
+        ui_clear();
+        ui_screen_header("Analisis teks", status);
         if (pilihan == 1) {
-            printf("Karakter : %d\nKata     : %d\nKalimat  : %d\nBaris    : %d\n",
+            ui_section("Statistik");
+            printf(" Karakter : %d\n Kata     : %d\n Kalimat  : %d\n Baris    : %d\n",
                    st->stats.chars, st->stats.words, st->stats.sentences,
                    st->stats.lines);
         } else if (pilihan == 2) {
@@ -235,8 +239,7 @@ static void menu_analyze(MenuState *st) {
         } else if (pilihan == 4) {
             analysis_search_word(st);
         }
-        ui_rule();
-        printf("\n");
+        ui_pause();
     }
 }
 
@@ -268,12 +271,13 @@ static void cipher_print_line(const char *label, const char *text) {
     putchar('\n');
 }
 
-/* Menu 4: sandi teks yang diketik dan proses file ke file. */
+/* Menu 4: sandi teks yang diketik dan proses file ke file; pola layar
+ * sama dengan sub-menu analisis. */
 static void menu_cipher(void) {
     int pilihan;
     for (;;) {
-        printf("\n");
-        ui_screen_header("Cipher", "Teks diketik; tanpa file dimuat");
+        ui_clear();
+        ui_screen_header("Text Toolkit > Cipher", "Teks diketik; tanpa file dimuat");
         ui_menu_item(1, "Caesar (teks diketik)");
         ui_menu_item(2, "Vigenere (teks diketik)");
         ui_menu_item(3, "Brute force Caesar");
@@ -282,9 +286,11 @@ static void menu_cipher(void) {
         ui_rule();
         if (!menu_choice(0, 4, &pilihan)) return;
         if (pilihan == 0) break;
+        ui_clear();
         if (pilihan == 1) {
             char text[UTIL_MAX_LINE];
             int shift;
+            ui_section("Caesar (teks diketik)");
             if (util_read_line("Teks > ", text, sizeof(text)) != ST_OK) return;
             if (util_read_int("Geser (negatif untuk dekripsi) > ", -1000000, 1000000, &shift) != ST_OK) return;
             tt_caesar(text, shift);
@@ -292,6 +298,7 @@ static void menu_cipher(void) {
         } else if (pilihan == 2) {
             char text[UTIL_MAX_LINE], key[UTIL_MAX_LINE];
             int enc;
+            ui_section("Vigenere (teks diketik)");
             if (util_read_line("Teks > ", text, sizeof(text)) != ST_OK) return;
             if (ui_confirm("Enkripsi? (n = dekripsi)", 1, &enc) != ST_OK) return;
             if (util_read_line("Kunci (huruf saja) > ", key, sizeof(key)) != ST_OK) return;
@@ -303,13 +310,14 @@ static void menu_cipher(void) {
             }
         } else if (pilihan == 3) {
             char text[UTIL_MAX_LINE];
+            ui_section("Brute force Caesar");
             if (util_read_line("Teks terenkripsi > ", text, sizeof(text)) != ST_OK) return;
             tt_caesar_brute(text);
         } else if (pilihan == 4) {
+            ui_section("File ke file");
             cipher_file_to_file();
         }
-        ui_rule();
-        printf("\n");
+        ui_pause();
     }
 }
 
@@ -358,17 +366,30 @@ static void state_free(MenuState *st) {
     analysis_invalidate(st);
 }
 
-/* Menu utama Text Toolkit; keluar (0 atau EOF) membebaskan semua memori. */
+/* Judul layar aksi menu utama, urut sesuai nomor menu. */
+static const char *const action_titles[6] = {
+    "Muat file teks",
+    "Mini grep",
+    "Analisis teks",
+    "Cipher (Caesar / Vigenere / brute force)",
+    "Palindrom dan reverse",
+    "Tulis laporan"
+};
+
+/* Menu utama Text Toolkit; keluar (0 atau EOF) membebaskan semua memori.
+ * Pola layar: bersih -> header + daftar menu; pilihan valid -> bersih ->
+ * judul aksi -> hasil -> jeda; keluar cukup satu baris penutup. */
 void run_text_toolkit(void) {
     MenuState st;
     int pilihan;
     memset(&st, 0, sizeof(st));
+    ui_init();
     ui_banner("TEXT TOOLKIT", "Mini grep, analisis, sandi, dan laporan",
               "Ketik angka menu; 0 untuk keluar");
     for (;;) {
         char status[UTIL_MAX_LINE];
         status_text(&st, status, sizeof(status));
-        printf("\n");
+        ui_clear();
         ui_screen_header("TEXT TOOLKIT", status);
         ui_menu_item(1, "Muat file teks");
         ui_menu_item(2, "Mini grep");
@@ -380,14 +401,21 @@ void run_text_toolkit(void) {
         ui_rule();
         if (!menu_choice(0, 6, &pilihan)) break;
         if (pilihan == 0) break;
-        if (pilihan == 1) menu_load_text(&st);
-        else if (pilihan == 2) menu_grep(&st);
-        else if (pilihan == 3) menu_analyze(&st);
-        else if (pilihan == 4) menu_cipher();
-        else if (pilihan == 5) menu_palindrome();
-        else if (pilihan == 6) menu_report(&st);
-        ui_rule();
-        printf("\n");
+        /* Sub-menu 3 dan 4 mengelola layarnya sendiri. */
+        if (pilihan == 3) {
+            menu_analyze(&st);
+        } else if (pilihan == 4) {
+            menu_cipher();
+        } else {
+            ui_clear();
+            ui_screen_header(action_titles[pilihan - 1], status);
+            if (pilihan == 1) menu_load_text(&st);
+            else if (pilihan == 2) menu_grep(&st);
+            else if (pilihan == 5) menu_palindrome();
+            else if (pilihan == 6) menu_report(&st);
+            ui_pause();
+        }
     }
     state_free(&st);
+    ui_info("Keluar.");
 }

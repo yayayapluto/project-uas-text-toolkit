@@ -40,7 +40,10 @@ const char *util_status_message(Status s) {
 Status util_read_line(const char *prompt, char *buf, size_t size) {
     size_t n;
     if (buf == NULL || size < 2) return ST_BAD_INPUT;
-    if (prompt != NULL) printf("%s", prompt);
+    if (prompt != NULL) {
+        printf("%s", prompt);
+        fflush(stdout);
+    }
     buf[0] = '\0';
     if (fgets(buf, (int)size, stdin) == NULL) return ST_BAD_INPUT;
     n = strlen(buf);

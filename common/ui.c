@@ -1,7 +1,74 @@
 #include "ui.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+
+static int plain_mode = 0;
+static int tty_out = 0;
+static int tty_in = 0;
+static int escape_ok = 0;
+
+/* Aktifkan ENABLE_VIRTUAL_TERMINAL_PROCESSING di Windows agar escape
+ * ANSI untuk layar bersih berfungsi; gagal diam-diam. */
+#ifdef _WIN32
+static void ui_enable_vt(void) {
+    DWORD mode = 0;
+    HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (h == INVALID_HANDLE_VALUE || !GetConsoleMode(h, &mode)) return;
+    if (!SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) return;
+    escape_ok = 1;
+}
+#endif
+
+void ui_init(void) {
+    plain_mode = getenv("NO_CLEAR") != NULL;
+    escape_ok = 0;
+#ifdef _WIN32
+    tty_out = _isatty(_fileno(stdout)) != 0;
+    tty_in = _isatty(_fileno(stdin)) != 0;
+    if (tty_out) ui_enable_vt();
+#else
+    tty_out = isatty(fileno(stdout)) != 0;
+    tty_in = isatty(fileno(stdin)) != 0;
+#endif
+}
+
+void ui_set_plain(int plain) {
+    plain_mode = plain ? 1 : 0;
+}
+
+int ui_is_interactive(void) {
+    return tty_out && tty_in && !plain_mode;
+}
+
+void ui_clear(void) {
+    if (!ui_is_interactive()) return;
+    if (escape_ok) {
+        fputs("\033[2J\033[H", stdout);
+        fflush(stdout);
+        return;
+    }
+    {
+        int i;
+        for (i = 0; i < 40; i++) putchar('\n');
+        fflush(stdout);
+    }
+}
+
+void ui_pause(void) {
+    char buf[2];
+    if (!ui_is_interactive()) return;
+    printf("Tekan Enter untuk kembali...");
+    fflush(stdout);
+    (void)util_read_line(NULL, buf, sizeof buf);
+}
 
 /* Lebar tampilan string: byte ASCII = 1, karakter UTF-8 multi-byte = 1
  * kolom per puncak lead byte-nya. */

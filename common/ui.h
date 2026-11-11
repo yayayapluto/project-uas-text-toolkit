@@ -9,6 +9,27 @@
 
 #define UI_WIDTH 78
 
+/* Inisialisasi UI: deteksi stdout/stdin terminal, aktifkan mode virtual
+ * terminal Windows bila perlu, dan periksa penggantian manual (argumen
+ * --plain lewat ui_set_plain atau variabel lingkungan NO_CLEAR).
+ * Dipanggil sekali di awal run_text_toolkit. */
+void ui_init(void);
+
+/* Penanda mode tanpa layar bersih; dipanggil dari main saat --plain. */
+void ui_set_plain(int plain);
+
+/* 1 jika stdout dan stdin terminal DAN tidak ada penggantian manual. */
+int ui_is_interactive(void);
+
+/* Bersihkan layar: escape "\033[2J\033[H" bila didukung, 40 baris
+ * kosong sebagai cadangan, atau tidak sama sekali saat tidak
+ * interaktif (output terpipa atau dialihkan). */
+void ui_clear(void);
+
+/* Jeda "Tekan Enter untuk kembali..." hanya saat interaktif; EOF pada
+ * jeda diabaikan dengan bersih. */
+void ui_pause(void);
+
 /* Bingkai judul sekali di awal program: garis sama dengan, judul, dua
  * baris deskripsi, garis penutup. */
 void ui_banner(const char *title, const char *line1, const char *line2);

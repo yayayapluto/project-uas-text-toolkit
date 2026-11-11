@@ -25,12 +25,20 @@ test harness U01-U17 dan keluar dengan kode 0 saat lulus.
 
 ## Tampilan terminal
 
-Semua tampilan memakai tampilan terminal yang murni ASCII dengan lebar
-78 kolom: bingkai dan pemisah `+ - | =`, tanpa ANSI, tanpa box drawing
-Unicode, sehingga aman di cmd.exe maupun PowerShell.
+Setiap pilihan menu membersihkan layar dan menggambar ulang dari atas:
+menu -> pilih -> layar bersih -> judul aksi -> hasil -> "Tekan Enter
+untuk kembali..." -> layar bersih -> menu lagi. Semua tampilan tetap
+murni ASCII dengan lebar 78 kolom: bingkai `+ - | =`, tanpa box
+drawing Unicode.
 
-- Setiap menu dibuka dengan garis, judul, dan baris status ("File aktif:
-  contoh.txt (403 karakter)" atau "Belum ada file dimuat").
+- Layar dibersihkan dengan escape `ESC[2J ESC[H` lewat fungsi UI, bukan
+  `system("cls")`. Di Windows mode virtual terminal diaktifkan lewat
+  `SetConsoleMode` (hanya di `common/ui.c`, dibungkus `#ifdef _WIN32`).
+- Deteksi: bersih hanya saat stdout DAN stdin keduanya terminal. Kalau
+  output terpipa atau dialihkan ke file, tidak ada escape dan tidak ada
+  jeda, sehingga log dan keluaran uji tetap bersih.
+- Nonaktifkan layar bersih lewat argumen `--plain` atau variabel
+  lingkungan `NO_CLEAR` (setel nilai apa pun, misal `set NO_CLEAR=1`).
 - Pesan seragam: `[OK]`, `[i]`, `[!]`, dan `[Error]`.
 - Pertanyaan ya/tidak berbentuk `Abaikan huruf besar/kecil? [Y/n]`;
   jawaban y, ya, n, tidak, atau kosong (memilih bawaan).
@@ -39,6 +47,8 @@ Unicode, sehingga aman di cmd.exe maupun PowerShell.
   "... dan N lainnya (tidak ditampilkan)"; baris yang lebar dipotong
   dengan "..." dan tidak memotong karakter UTF-8 di tengah.
 - Kolom angka diratakan kanan; teks rata kiri.
+- Keluar (0) hanya mencetak satu baris penutup; EOF pada menu atau
+  jeda mengakhiri program dengan bersih.
 
 ## Format file
 
