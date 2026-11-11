@@ -1,0 +1,2 @@
+# crlf.txt harus tetap byte persis dengan akhir baris \r\n.
+data/crlf.txt -text
