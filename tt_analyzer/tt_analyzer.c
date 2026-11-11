@@ -1,5 +1,6 @@
 #include "tt_analyzer.h"
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 
 static int is_word_char(char c) {
