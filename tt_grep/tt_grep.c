@@ -1,5 +1,4 @@
 #include "tt_grep.h"
-#include "../common/common.h"
 #include <string.h>
 #include <ctype.h>
 
@@ -33,6 +32,20 @@ static int count_occurrences(const char *line, const char *pattern,
         if (match_at(line, i, pattern, ignore_case)) total++;
     }
     return total;
+}
+
+/* Posisi (mulai 1) kemunculan pertama pattern pada baris; 0 jika tidak ada. */
+static int first_occurrence(const char *line, const char *pattern,
+                            int ignore_case) {
+    size_t len, plen, i;
+    if (line == NULL || pattern == NULL) return 0;
+    len = strlen(line);
+    plen = strlen(pattern);
+    if (plen == 0 || plen > len) return 0;
+    for (i = 0; i + plen <= len; i++) {
+        if (match_at(line, i, pattern, ignore_case)) return (int)i + 1;
+    }
+    return 0;
 }
 
 /* Memecah teks menjadi baris-baris tanpa \r maupun \n.
@@ -72,17 +85,6 @@ static Status split_lines(const char *data, size_t n, char ***out, int *count) {
     return ST_OK;
 }
 
-/* Menghitung jumlah baris yang memenuhi kriteria (cocok atau invert). */
-static int count_target_lines(char **lines, int count, const char *pattern,
-                              int ignore_case, int invert) {
-    int i, hit = 0;
-    for (i = 0; i < count; i++) {
-        int has = count_occurrences(lines[i], pattern, ignore_case) > 0;
-        if (has != invert) hit++;
-    }
-    return hit;
-}
-
 /* Mengisi array TtMatch dan melepas baris yang tidak ikut. */
 static void fill_matches(TtMatch *matches, char **lines, int count,
                          const char *pattern, int ignore_case, int invert,
@@ -90,9 +92,12 @@ static void fill_matches(TtMatch *matches, char **lines, int count,
     int i;
     *filled = 0;
     for (i = 0; i < count; i++) {
-        int has = count_occurrences(lines[i], pattern, ignore_case) > 0;
+        int col = first_occurrence(lines[i], pattern, ignore_case);
+        int has = (col > 0);
         if (has != invert) {
-            matches[*filled].line = lines[i];
+            matches[*filled].line = i + 1;
+            matches[*filled].col = invert ? 0 : col;
+            matches[*filled].text = lines[i];
             (*filled)++;
         } else {
             util_free(lines[i]);
@@ -113,11 +118,15 @@ Status tt_grep(const TtText *t, const char *pattern, int ignore_case,
     *matches = NULL;
     *match_count = 0;
     *total_occurrences = 0;
-    if (split_lines(t->data, t->n, &lines, &count) != ST_OK) return ST_BAD_INPUT;
+    if (split_lines(t->data, t->length, &lines, &count) != ST_OK) return ST_BAD_INPUT;
     for (i = 0; i < count; i++) {
         *total_occurrences += count_occurrences(lines[i], pattern, ignore_case);
     }
-    target = count_target_lines(lines, count, pattern, ignore_case, invert);
+    target = 0;
+    for (i = 0; i < count; i++) {
+        int has = first_occurrence(lines[i], pattern, ignore_case) > 0;
+        if (has != invert) target++;
+    }
     if (target == 0) {
         for (i = 0; i < count; i++) util_free(lines[i]);
         util_free(lines);
@@ -140,6 +149,6 @@ Status tt_grep(const TtText *t, const char *pattern, int ignore_case,
 void tt_free_matches(TtMatch *matches, int match_count) {
     int i;
     if (matches == NULL) return;
-    for (i = 0; i < match_count; i++) util_free(matches[i].line);
+    for (i = 0; i < match_count; i++) util_free(matches[i].text);
     util_free(matches);
 }
