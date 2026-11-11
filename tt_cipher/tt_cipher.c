@@ -1,85 +1,136 @@
 #include "tt_cipher.h"
-#include "common.h"
-#include <string.h>
 #include <ctype.h>
-#include <stdio.h>
+#include <string.h>
 
+/* Sandi Caesar: geser huruf dengan basis 'A' atau 'a', non-huruf utuh. */
+Status tt_caesar(char *text, int shift) {
+    int s = ((shift % 26) + 26) % 26;
+    if (text == NULL) return ST_BAD_INPUT;
+    for (; *text != '\0'; text++) {
+        char c = *text;
+        if (c >= 'A' && c <= 'Z') *text = (char)('A' + (c - 'A' + s) % 26);
+        else if (c >= 'a' && c <= 'z') *text = (char)('a' + (c - 'a' + s) % 26);
+    }
+    return ST_OK;
+}
+
+/* Kunci valid hanya jika tidak kosong dan seluruhnya huruf. */
 static int is_key_valid(const char *key) {
-    if (key == NULL) return 0;
-    for (;; key++) {
-        if (!isalpha((unsigned char)key[0])) return 0;
+    const char *k;
+    if (key == NULL || key[0] == '\0') return 0;
+    for (k = key; *k != '\0'; k++) {
+        if (!isalpha((unsigned char)*k)) return 0;
     }
     return 1;
 }
 
-static char shift_char(char c, int shift, int encrypt) {
-    if (isupper((unsigned char)c))
-        return (char)(((unsigned char)c - 'A' + (encrypt ? shift : -shift) % 26 + 26) % 26 + 'A');
-    if (islower((unsigned char)c))
-        return (char)(((unsigned char)c - 'a' + (encrypt ? shift : -shift) % 26 + 26) % 26 + 'a');
-    return c;
-}
-
-Status tt_caesar(char *text, int shift) {
-    if (text == NULL) return ST_BAD_INPUT;
-    shift = ((shift % 26) + 26) % 26;
-    for (char *p = text; *p; p++) *p = shift_char(*p, shift, 1);
-    return ST_OK;
-}
-
+/* Sandi Vigenere: geseran dari huruf kunci, indeks kunci maju hanya
+ * pada karakter huruf teks; dekripsi mengurangi geseran. */
 Status tt_vigenere(char *text, const char *key, int decrypt) {
-    if (text == NULL || key == NULL) return ST_BAD_INPUT;
+    size_t ki = 0, klen;
+    if (text == NULL) return ST_BAD_INPUT;
     if (!is_key_valid(key)) return ST_BAD_INPUT;
-    int klen = (int)strlen(key);
-    int shifts[26];
-    for (int i = 0; i < klen; i++) shifts[i] = tolower((unsigned char)key[i]) - 'a';
-    int ki = 0;
-    for (char *p = text; *p; p++) {
-        if (isalpha((unsigned char)*p)) {
-            int s = shifts[ki % klen];
-            if (!decrypt) s = -s;
-            *p = shift_char(*p, s, 1);
+    klen = strlen(key);
+    for (; *text != '\0'; text++) {
+        char c = *text;
+        if (isalpha((unsigned char)c)) {
+            int kshift = tolower((unsigned char)key[ki % klen]) - 'a';
+            if (decrypt) kshift = (26 - kshift) % 26;
+            if (c >= 'A' && c <= 'Z') {
+                *text = (char)('A' + (c - 'A' + kshift) % 26);
+            } else {
+                *text = (char)('a' + (c - 'a' + kshift) % 26);
+            }
             ki++;
         }
     }
     return ST_OK;
 }
 
+/* Memproses isi berkas dengan Caesar atau Vigenere lalu menulis hasil;
+ * berkas sumber tetap utuh. */
 Status tt_cipher_file(const char *in_path, const char *out_path, int mode,
                       int shift, const char *key) {
-    char *data;
-    size_t len;
-    Status s = util_read_file(in_path, &data, &len);
+    Status s;
+    char *data = NULL;
+    size_t len = 0;
+    if (in_path == NULL || out_path == NULL) return ST_BAD_INPUT;
+    if (mode < 0 || mode > 3) return ST_BAD_INPUT;
+    if ((mode == 2 || mode == 3) && !is_key_valid(key)) return ST_BAD_INPUT;
+    s = util_read_file(in_path, &data, &len);
     if (s != ST_OK) return s;
-    if (mode == 0) tt_caesar(data, shift);
-    else if (mode == 1) tt_caesar(data, -shift);
-    else if (mode == 2) s = tt_vigenere(data, key, 0);
-    else if (mode == 3) s = tt_vigenere(data, key, 1);
-    else { util_free(data); return ST_BAD_INPUT; }
-    if (s != ST_OK) { util_free(data); return s; }
-    s = util_write_file(out_path, data, len);
+    if (mode == 0 || mode == 1) {
+        s = tt_caesar(data, mode == 0 ? shift : -shift);
+    } else {
+        s = tt_vigenere(data, key, mode == 3);
+    }
+    if (s == ST_OK) {
+        s = util_write_file(out_path, data);
+    }
     util_free(data);
     return s;
 }
 
+/* Brute force: satu baris per geser 0..25 dengan salinan teks. */
 void tt_caesar_brute(const char *text) {
+    char *buf;
+    size_t len;
+    int shift;
     if (text == NULL) return;
-    size_t n = strlen(text);
-    char *buf = (char *)util_malloc(n + 1);
-    memcpy(buf, text, n); buf[n] = '\0';
-    for (int i = 0; i < 26; i++) {
-        tt_caesar(buf, i);
-        printf("Geser %d: %s\n", i, buf);
+    len = strlen(text);
+    buf = (char *)util_malloc(len + 1);
+    if (buf == NULL) {
+        printf("Memori tidak cukup untuk brute force.\n");
+        return;
+    }
+    for (shift = 0; shift < 26; shift++) {
+        strcpy(buf, text);
+        tt_caesar(buf, shift);
+        printf("Geser %2d: %s\n", shift, buf);
     }
     util_free(buf);
 }
 
+/* Menghitung kapital, kecil, dan lainnya lewat pointer keluaran. */
 void tt_count_letters(const char *s, int *upper, int *lower, int *other) {
-    if (s == NULL || upper == NULL || lower == NULL || other == NULL) return;
-    *upper = *lower = *other = 0;
-    for (const char *p = s; *p; p++) {
-        if (isupper((unsigned char)*p)) (*upper)++;
-        else if (islower((unsigned char)*p)) (*lower)++;
-        else (*other)++;
+    int u = 0, l = 0, o = 0;
+    for (; s != NULL && *s != '\0'; s++) {
+        if (*s >= 'A' && *s <= 'Z') u++;
+        else if (*s >= 'a' && *s <= 'z') l++;
+        else o++;
     }
+    if (upper != NULL) *upper = u;
+    if (lower != NULL) *lower = l;
+    if (other != NULL) *other = o;
+}
+
+/* Pembalik rekursif: indeks kanan bergerak mundur menyalin karakter. */
+static void reverse_at(const char *s, char *out, size_t right) {
+    if (right == (size_t)-1) return;
+    *out = s[right];
+    reverse_at(s, out + 1, right - 1);
+}
+
+/* Membalik s ke out secara rekursif; out butuh ruang strlen(s)+1. */
+void tt_reverse_rec(const char *s, char *out) {
+    size_t len;
+    if (s == NULL || out == NULL) return;
+    len = strlen(s);
+    reverse_at(s, out, len - 1);
+    out[len] = '\0';
+}
+
+/* Palindrom rekursif: lewati non-alfanumerik, bandingkan huruf kecil. */
+static int palindrome_at(const char *s, int left, int right) {
+    if (left >= right) return 1;
+    if (!isalnum((unsigned char)s[left])) return palindrome_at(s, left + 1, right);
+    if (!isalnum((unsigned char)s[right])) return palindrome_at(s, left, right - 1);
+    if (tolower((unsigned char)s[left]) != tolower((unsigned char)s[right])) return 0;
+    return palindrome_at(s, left + 1, right - 1);
+}
+
+/* Cek palindrom string kosong dianggap palindrom. */
+int tt_palindrome_rec(const char *s) {
+    if (s == NULL) return 0;
+    return palindrome_at(s, 0, (int)strlen(s) - 1);
 }
