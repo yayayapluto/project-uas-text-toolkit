@@ -1,7 +1,7 @@
 #ifndef TT_TEXT_H
 #define TT_TEXT_H
 
-#include "common.h"
+#include "../common/common.h"
 
 typedef struct {
     char *data;
