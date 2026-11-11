@@ -28,12 +28,23 @@ static void analysis_invalidate(MenuState *st) {
     st->has_stats = 0;
 }
 
+/* Membuang tanda kutip pembuka dan penutup dari path tempel, karena
+ * "Copy as path" Windows menyertakan kutip di kedua ujung. */
+static void strip_quotes(char *s) {
+    size_t len = strlen(s);
+    if (len >= 2 && s[0] == '"' && s[len - 1] == '"') {
+        s[len - 1] = '\0';
+        memmove(s, s + 1, len - 1);
+    }
+}
+
 /* Menu 1: muat file teks; teks lama dibebaskan dulu. */
 static void menu_load_text(MenuState *st) {
     char path[UTIL_MAX_PATH];
     Status s;
     if (util_read_line("Path file: ", path, sizeof(path)) != ST_OK) return;
     util_trim(path);
+    strip_quotes(path);
     if (path[0] == '\0') {
         printf("%s\n", util_status_message(ST_BAD_INPUT));
         return;
@@ -164,8 +175,10 @@ static void cipher_file_to_file(void) {
     if (util_read_int("Mode: ", 0, 3, &mode) != ST_OK) return;
     if (util_read_line("File sumber: ", in_path, sizeof(in_path)) != ST_OK) return;
     util_trim(in_path);
+    strip_quotes(in_path);
     if (util_read_line("File hasil: ", out_path, sizeof(out_path)) != ST_OK) return;
     util_trim(out_path);
+    strip_quotes(out_path);
     shift = 0;
     if (mode == 0 || mode == 1) {
         if (util_read_int("Geser: ", -1000000, 1000000, &shift) != ST_OK) return;
@@ -238,6 +251,7 @@ static void menu_report(MenuState *st) {
     }
     if (util_read_line("Nama file laporan (kosong = ke layar): ", out_path, sizeof(out_path)) != ST_OK) return;
     util_trim(out_path);
+    strip_quotes(out_path);
     if (out_path[0] == '\0') {
         s = tt_write_report(&st->stats, st->freq, st->freq_count, st->text.path, NULL);
     } else {
