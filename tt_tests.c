@@ -1,5 +1,5 @@
 /* Test harness Text Toolkit: U01 sampai U17 plus uji tambahan PRD 12.2.
- * Semua pemeriksaan memakai util_check; berkas sementara dihapus setelah
+ * Semua pemeriksaan memakai util_check; file sementara dihapus setelah
  * dipakai. Kembali 0 saat seluruh uji lulus. */
 #include "text_toolkit.h"
 #include "common/common.h"
@@ -12,7 +12,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-/* Menulis berkas teks sementara untuk pengujian. */
+/* Menulis file teks sementara untuk pengujian. */
 static Status write_temp(const char *path, const char *content) {
     return util_write_file(path, content, strlen(content));
 }
@@ -104,8 +104,8 @@ static void test_grep(void) {
     util_test_begin("U11-U12 mini grep");
     util_check(write_temp("tests/tmp_grep.txt",
                           "Halo dunia.\nDunia itu luas.\nHalo lagi, halo semua!\n") == ST_OK,
-               "tulis berkas uji grep");
-    util_check(tt_load_text("tests/tmp_grep.txt", &t) == ST_OK, "muat berkas grep");
+               "tulis file uji grep");
+    util_check(tt_load_text("tests/tmp_grep.txt", &t) == ST_OK, "muat file grep");
     util_check(tt_grep(&t, "halo", 0, 0, &m, &n, &total) == ST_OK && n == 1 &&
                m[0].line == 3 && m[0].col == 12 && total == 1, "U11 peka huruf");
     tt_free_matches(m, n);
@@ -126,11 +126,11 @@ static void test_grep(void) {
     util_check(util_test_end() == 0, "U11-U12 lulus");
 }
 
-/* U13 dan U14: berkas hilang, kosong, dan CRLF. */
+/* U13 dan U14: file hilang, kosong, dan CRLF. */
 static void test_files(void) {
     TtText t1, t2;
     TtStats s1, s2;
-    util_test_begin("U13-U14 berkas");
+    util_test_begin("U13-U14 file");
     util_check(tt_load_text("data/tidak_ada.txt", &t1) == ST_FILE_NOT_FOUND, "U13 tidak ada");
     util_check(tt_load_text("data/kosong.txt", &t1) == ST_FILE_EMPTY, "U13 kosong");
     util_check(tt_load_text("data/contoh.txt", &t1) == ST_OK, "muat contoh");
@@ -180,14 +180,14 @@ static void test_alloc_failure(void) {
 }
 
 /* Uji tambahan: kata > 39 karakter dipotong, laporan ke folder hilang,
- * dan proses berkas cipher berkas ke berkas. */
+ * dan proses file cipher file ke file. */
 static void test_extras(void) {
     TtWordFreq *f = NULL;
     TtStats s;
     TtText t, t2;
     int n = 0;
     char longword[64];
-    util_test_begin("Tambahan potong kata, laporan, cipher berkas");
+    util_test_begin("Tambahan potong kata, laporan, cipher file");
     strcpy(longword, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaX");
     util_check(tt_word_frequency(longword, &f, &n) == ST_OK && n == 1, "freq siap");
     util_check(strlen(f[0].word) == 39, "kata 41 huruf dipotong 39");
@@ -197,23 +197,23 @@ static void test_extras(void) {
                "laporan ke folder tidak ada");
     util_check(write_temp("tests/tmp_in.txt", "Hello, World!\n") == ST_OK, "tulis input cipher");
     util_check(tt_cipher_file("tests/tmp_in.txt", "tests/tmp_out.txt", 0, 3, "") == ST_OK,
-               "cipher berkas Caesar");
+               "cipher file Caesar");
     util_check(tt_cipher_file("tests/tmp_out.txt", "tests/tmp_rt.txt", 1, 3, "") == ST_OK,
-               "cipher berkas roundtrip");
+               "cipher file roundtrip");
     util_check(tt_load_text("tests/tmp_rt.txt", &t) == ST_OK && strcmp(t.data, "Hello, World!\n") == 0,
-               "roundtrip berkas identik");
+               "roundtrip file identik");
     tt_free_text(&t);
     util_check(tt_cipher_file("tests/tmp_in.txt", "tests/tidak_ada_f/a.txt", 0, 1, "") == ST_FILE_WRITE,
                "cipher tulis gagal -> ST_FILE_WRITE");
     util_check(tt_cipher_file("tests/pendek.txt", "tests/out_c3.txt", 0, 3, "") == ST_OK,
-               "expected berkas: Caesar pendek.txt");
+               "expected file: Caesar pendek.txt");
     util_check(tt_load_text("tests/out_c3.txt", &t) == ST_OK &&
                tt_load_text("tests/expected_caesar3.txt", &t2) == ST_OK &&
                strcmp(t.data, t2.data) == 0, "hasil Caesar = expected dihitung tangan");
     tt_free_text(&t);
     tt_free_text(&t2);
     util_check(tt_cipher_file("tests/pendek.txt", "tests/out_vig.txt", 2, 0, "LEMON") == ST_OK,
-               "expected berkas: Vigenere pendek.txt");
+               "expected file: Vigenere pendek.txt");
     util_check(tt_load_text("tests/out_vig.txt", &t) == ST_OK &&
                tt_load_text("tests/expected_vigenere_lemon.txt", &t2) == ST_OK &&
                strcmp(t.data, t2.data) == 0, "hasil Vigenere = expected dihitung tangan");
@@ -222,7 +222,7 @@ static void test_extras(void) {
     util_check(tt_cipher_file("tests/out_c3.txt", "tests/rt_c3.txt", 1, 3, "") == ST_OK &&
                tt_load_text("tests/rt_c3.txt", &t) == ST_OK &&
                tt_load_text("tests/pendek.txt", &t2) == ST_OK &&
-               strcmp(t.data, t2.data) == 0, "dekripsi Caesar berkas = pendek.txt");
+               strcmp(t.data, t2.data) == 0, "dekripsi Caesar file = pendek.txt");
     tt_free_text(&t);
     tt_free_text(&t2);
     util_fail_alloc_after(0);

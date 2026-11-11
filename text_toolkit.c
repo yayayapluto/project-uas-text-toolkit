@@ -19,7 +19,7 @@ typedef struct {
     int has_freq;
 } MenuState;
 
-/* Melepas frekuensi lama dan menandai hasil analisis basi. */
+/* Membebaskan frekuensi lama dan menandai hasil analisis basi. */
 static void analysis_invalidate(MenuState *st) {
     util_free(st->freq);
     st->freq = NULL;
@@ -28,11 +28,11 @@ static void analysis_invalidate(MenuState *st) {
     st->has_stats = 0;
 }
 
-/* Menu 1: muat berkas teks; teks lama dilepas dulu. */
+/* Menu 1: muat file teks; teks lama dibebaskan dulu. */
 static void menu_load_text(MenuState *st) {
     char path[UTIL_MAX_PATH];
     Status s;
-    if (util_read_line("Path berkas: ", path, sizeof(path)) != ST_OK) return;
+    if (util_read_line("Path file: ", path, sizeof(path)) != ST_OK) return;
     util_trim(path);
     if (path[0] == '\0') {
         printf("%s\n", util_status_message(ST_BAD_INPUT));
@@ -43,7 +43,7 @@ static void menu_load_text(MenuState *st) {
     if (s == ST_OK) {
         st->has_text = 1;
         analysis_invalidate(st);
-        printf("Berkas dimuat (%d karakter).\n", (int)st->text.length);
+        printf("File dimuat (%d karakter).\n", (int)st->text.length);
     } else {
         st->has_text = 0;
         printf("%s\n", util_status_message(s));
@@ -71,7 +71,7 @@ static void menu_grep(const MenuState *st) {
     int ignore_case, invert;
     Status s;
     if (!st->has_text) {
-        printf("Muat berkas lewat menu 1 lebih dahulu.\n");
+        printf("Muat file lewat menu 1 lebih dahulu.\n");
         return;
     }
     if (util_read_line("Pola yang dicari: ", pattern, sizeof(pattern)) != ST_OK) return;
@@ -131,7 +131,7 @@ static void analysis_search_word(const MenuState *st) {
 static void menu_analyze(MenuState *st) {
     int pilihan;
     if (analysis_run(st) != ST_OK) {
-        printf("Muat berkas lewat menu 1 lebih dahulu.\n");
+        printf("Muat file lewat menu 1 lebih dahulu.\n");
         return;
     }
     for (;;) {
@@ -155,16 +155,16 @@ static void menu_analyze(MenuState *st) {
     }
 }
 
-/* Menu 4 opsi 4: proses berkas ke berkas sesuai mode tt_cipher_file. */
+/* Menu 4 opsi 4: proses file ke file sesuai mode tt_cipher_file. */
 static void cipher_file_to_file(void) {
     char in_path[UTIL_MAX_PATH], out_path[UTIL_MAX_PATH], key[UTIL_MAX_LINE];
     int mode, shift;
     Status s;
     printf("Mode: 0=Caesar enkripsi, 1=Caesar dekripsi, 2=Vigenere enkripsi, 3=Vigenere dekripsi\n");
     if (util_read_int("Mode: ", 0, 3, &mode) != ST_OK) return;
-    if (util_read_line("Berkas sumber: ", in_path, sizeof(in_path)) != ST_OK) return;
+    if (util_read_line("File sumber: ", in_path, sizeof(in_path)) != ST_OK) return;
     util_trim(in_path);
-    if (util_read_line("Berkas hasil: ", out_path, sizeof(out_path)) != ST_OK) return;
+    if (util_read_line("File hasil: ", out_path, sizeof(out_path)) != ST_OK) return;
     util_trim(out_path);
     shift = 0;
     if (mode == 0 || mode == 1) {
@@ -178,12 +178,12 @@ static void cipher_file_to_file(void) {
     else printf("%s\n", util_status_message(s));
 }
 
-/* Menu 4: sandi teks yang diketik dan proses berkas ke berkas. */
+/* Menu 4: sandi teks yang diketik dan proses file ke file. */
 static void menu_cipher(void) {
     int pilihan;
     for (;;) {
         printf("--- Cipher ---\n");
-        printf("1. Caesar (teks diketik)\n2. Vigenere (teks diketik)\n3. Brute force Caesar\n4. Berkas ke berkas\n0. Kembali\n");
+        printf("1. Caesar (teks diketik)\n2. Vigenere (teks diketik)\n3. Brute force Caesar\n4. file ke file\n0. Kembali\n");
         if (util_read_int("Pilihan: ", 0, 4, &pilihan) != ST_OK) return;
         if (pilihan == 0) return;
         if (pilihan == 1 || pilihan == 2) {
@@ -226,7 +226,7 @@ static void menu_report(MenuState *st) {
     char out_path[UTIL_MAX_PATH];
     Status s;
     if (!st->has_text) {
-        printf("Muat berkas lewat menu 1 lebih dahulu.\n");
+        printf("Muat file lewat menu 1 lebih dahulu.\n");
         return;
     }
     if (!st->has_stats || !st->has_freq) {
@@ -236,7 +236,7 @@ static void menu_report(MenuState *st) {
             return;
         }
     }
-    if (util_read_line("Nama berkas laporan (kosong = ke layar): ", out_path, sizeof(out_path)) != ST_OK) return;
+    if (util_read_line("Nama file laporan (kosong = ke layar): ", out_path, sizeof(out_path)) != ST_OK) return;
     util_trim(out_path);
     if (out_path[0] == '\0') {
         s = tt_write_report(&st->stats, st->freq, st->freq_count, st->text.path, NULL);
@@ -249,14 +249,14 @@ static void menu_report(MenuState *st) {
     }
 }
 
-/* Melepas seluruh memori yang masih dipegang state. */
+/* Membebaskan seluruh memori yang masih dipegang state. */
 static void state_free(MenuState *st) {
     tt_free_text(&st->text);
     st->has_text = 0;
     analysis_invalidate(st);
 }
 
-/* Menu utama Text Toolkit; keluar (0 atau EOF) melepas semua memori. */
+/* Menu utama Text Toolkit; keluar (0 atau EOF\) membebaskan semua memori. */
 void run_text_toolkit(void) {
     MenuState st;
     int pilihan;

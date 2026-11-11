@@ -1,7 +1,7 @@
 #ifndef TEXT_TOOLKIT_H
 #define TEXT_TOOLKIT_H
 
-/* Menu utama Text Toolkit; seluruh state dipegang lokal, memori dilepas
+/* Menu utama Text Toolkit; seluruh state dipegang lokal, memori dibebaskan
  * saat keluar. */
 void run_text_toolkit(void);
 
