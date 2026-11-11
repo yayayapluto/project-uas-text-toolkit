@@ -151,7 +151,8 @@ static Status analysis_run(MenuState *st) {
     return ST_OK;
 }
 
-/* Tabel frekuensi kata: kolom kata rata kiri, jumlah rata kanan. */
+/* Tabel frekuensi kata: kolom kata rata kiri, jumlah rata kanan; header
+ * memakai lebar kolom yang sama agar garis | simetris. */
 static void freq_print(const TtWordFreq *f, int count) {
     int w = 0, cw = 0, i;
     for (i = 0; i < count; i++) {
@@ -160,8 +161,9 @@ static void freq_print(const TtWordFreq *f, int count) {
         if (num_digits(f[i].count) > cw) cw = num_digits(f[i].count);
     }
     if (w < 4) w = 4;
+    if (cw < 6) cw = 6;
     ui_section("Frekuensi kata (terbanyak dulu)");
-    printf(" Kata  | Jumlah\n");
+    printf(" %-*s | %*s\n", w, "Kata", cw, "Jumlah");
     ui_rule();
     for (i = 0; i < count; i++) {
         printf(" %-*s | %*d\n", w, f[i].word, cw, f[i].count);

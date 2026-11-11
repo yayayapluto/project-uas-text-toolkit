@@ -173,13 +173,15 @@ int tt_binary_search_word(const TtWordFreq *a, int n, const char *word) {
     return -1;
 }
 
-/* Histogram "A | ###### 6": huruf 0 disembunyikan; skala jika max > 50. */
+/* Histogram "A | ###### 6": huruf 0 disembunyikan; skala jika max > 50;
+ * angka rata kanan sesuai lebar hitungan terbesar. */
 void tt_print_letter_histogram(const TtStats *s) {
-    int i, max = 0;
+    int i, max = 0, cwid = 1, m;
     if (s == NULL) return;
     for (i = 0; i < 26; i++) {
         if (s->letters[i] > max) max = s->letters[i];
     }
+    for (m = max; m >= 10; m /= 10) cwid++;
     for (i = 0; i < 26; i++) {
         int count = s->letters[i];
         int bars, k;
@@ -192,6 +194,6 @@ void tt_print_letter_histogram(const TtStats *s) {
         }
         printf("%c | ", 'A' + i);
         for (k = 0; k < bars; k++) putchar('#');
-        printf(" %d\n", count);
+        printf(" %*d\n", cwid, count);
     }
 }
