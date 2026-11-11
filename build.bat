@@ -15,3 +15,13 @@ if errorlevel 1 (
 )
 echo Build sukses: text_toolkit.exe
 text_toolkit.exe --test
+
+rem Demo output CLI ala rich (ui\ttui).
+gcc -std=c99 -Wall -Wextra -Wpedantic -g -I. ^
+    ttui_demo.c ui\ttui.c common\common.c ^
+    -lm -o ttui_demo.exe
+if errorlevel 1 (
+    echo Build demo gagal.
+    exit /b 1
+)
+ttui_demo.exe

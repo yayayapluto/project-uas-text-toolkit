@@ -11,11 +11,15 @@ SRC = tt_main.c text_toolkit.c tt_tests.c \
       tt_report/tt_report.c
 
 EXE = text_toolkit
+DEMO = ttui_demo
 
-all: $(EXE)
+all: $(EXE) $(DEMO)
 
 $(EXE): $(SRC)
 	$(CC) $(CFLAGS) $(SRC) -o $(EXE) $(LDLIBS)
+
+$(DEMO): ttui_demo.c ui/ttui.c common/common.c
+	$(CC) $(CFLAGS) ttui_demo.c ui/ttui.c common/common.c -o $(DEMO) $(LDLIBS)
 
 test: $(EXE)
 	./$(EXE) --test
@@ -25,4 +29,4 @@ asan:
 	./text_toolkit_asan --test
 
 clean:
-	-rm $(EXE) text_toolkit_asan
+	-rm $(EXE) $(DEMO) text_toolkit_asan
